@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android", "web"],
+  "apple": {
+    "modules": ["BeaconNativeScannerModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.beaconnativescanner.BeaconNativeScannerModule"]
+  }
+}
