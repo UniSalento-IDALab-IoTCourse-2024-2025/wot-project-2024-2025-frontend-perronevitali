@@ -44,13 +44,13 @@ const styles = StyleSheet.create({
   },
   start:{
       fontSize: 24,
-      height: 600,
       fontWeight: 'bold',
       marginTop:40,
       marginLeft: 10,
   },
   boxMessage: {
       width: 340,
+      height: 90,
       marginTop: 30,
       marginBottom: 30,
       padding: 10,

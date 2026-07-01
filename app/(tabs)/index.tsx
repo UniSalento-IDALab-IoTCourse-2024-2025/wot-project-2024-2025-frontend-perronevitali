@@ -10,17 +10,51 @@ import { useRouter } from 'expo-router';
 import BeaconService from "@/hooks/beacon-service"
 import {Buffer} from "buffer";
 import CryptoJS from "crypto-js";
-import { BleManager} from 'react-native-ble-plx';
-import { NativeModules } from 'react-native';
 import { PlatformConstants } from 'react-native';
 import BeaconNativeScanner from '../../modules/beacon-native-scanner';
+import BleManager from "react-native-ble-manager";
 
 
 export default function HomeScreen() {
   const router = useRouter();
+  const NAME="BlueUp-01-021238";
+  useEffect(() => {
+    BleManager.start({ showAlert: false });
+    const MAC = "C2:74:C5:9E:62:C1";
+
+    const listener = BleManager.onDiscoverPeripheral((peripheral) => {
+
+      if (peripheral.id !== MAC) {
+        return;
+      }
+
+      console.log("===== TROVATO =====");
+      console.log(JSON.stringify(peripheral, null, 2));
+
+    });
+
+    return () => {
+      listener.remove();
+      stopListener.remove();
+    };
+  }, []);
+
+
+  const handleBleManagerScan = async () => {
+
+    console.log("SCAN BLE MANAGER");
+
+    await BleManager.scan({
+      serviceUUIDs: [],
+      seconds: 10,
+      allowDuplicates: true,
+      scanningMode: 2
+    });
+
+  };
 
   //const bleManager = new BleManager();
-  const NAME="BlueUp-01-021238";
+
   // Function to start scanning BLE devices
   function startScanning() {
       BeaconService.startScanning()
@@ -153,7 +187,11 @@ export default function HomeScreen() {
                                   Stoppa scandsione
                     </Text>
               </TouchableOpacity>
-
+              <TouchableOpacity onPress={handleBleManagerScan} style={styles.buttonBle}>
+                <Text style={styles.textbutton}>
+                      Scansione 2
+                </Text>
+              </TouchableOpacity>
             </ThemedView>
 
             {/* ── Sezione Notifiche ─────────────────────────────────── */}

@@ -12,6 +12,8 @@ import mqtt from 'mqtt';
    const EDDYSTONE_UUID = "0000feaa-0000-1000-8000-00805f9b34fb";
    const PASSWORD = "blueup";
    const URL_SCHEMA="https://"
+   let lastRaw = null;
+
 
    const TX_POWER_1M_MAC1 = -70
     const TX_POWER_1M_MAC2 = -82.6
@@ -100,7 +102,7 @@ import mqtt from 'mqtt';
      }
      function startScanning (){
          console.log("Inizio scansione")
-         bleManager.startDeviceScan(null,  {legacyScan: false, allowDuplicates: true }, (error, scannedDevice) => {
+         bleManager.startDeviceScan(null,  {allowDuplicates: true, legacyScan: false }, (error, scannedDevice) => {
              if (error) {
                  console.warn(JSON.stringify(error,null,2));
                  return;
@@ -108,7 +110,7 @@ import mqtt from 'mqtt';
             if (scannedDevice) {
                 let distance=0
                 //if(scannedDevice.id!=="2C:CF:67:81:88:04") return;
-                if(scannedDevice.id==="14:7F:CE:8E:F0:33"){
+                /*if(scannedDevice.id==="14:7F:CE:8E:F0:33"){
                     distance=calculateDistance(TX_POWER_1M_MAC1,scannedDevice.rssi)
                     if (client.connected) {
                             const payload = JSON.stringify({
@@ -128,7 +130,9 @@ import mqtt from 'mqtt';
                     console.log("Distance from:",scannedDevice.name,":",distance.toFixed(2),"m with rssi",scannedDevice.rssi)
 
 
-                }
+                }*/
+                if (scannedDevice.id !== "C2:74:C5:9E:62:C1") return;
+
 
                 //read(scannedDevice)
                 //console.log("Trovato",scannedDevice
@@ -166,7 +170,7 @@ import mqtt from 'mqtt';
                     //stopScanning()
                     //console.log("Scanned",scannedDevice)
                     //rssi=scannedDevice.rssi
-                    //stampaContenuto(scannedDevice,scannedDevice.id)
+                    stampaContenuto(scannedDevice,scannedDevice.id)
 
 
                    // scopriTutto(scannedDevice)
