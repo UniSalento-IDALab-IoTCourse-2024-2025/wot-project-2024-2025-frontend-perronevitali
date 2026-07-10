@@ -2,6 +2,7 @@ import { useState,useEffect } from 'react';
 import { StyleSheet,View, Button, Text, TextInput, TouchableOpacity,ScrollView} from 'react-native';
 import { Divider } from 'react-native-elements';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function ProfileScreen() {
 
@@ -11,6 +12,17 @@ export default function ProfileScreen() {
     const [surname,setSurname] = useState('');
     const [email,setEmail] = useState('');
     const [phone,setPhone] = useState('');
+
+    const getInfoUser = async () =>{
+        const user = JSON.parse(await AsyncStorage.getItem("user"))
+        setName(user.nome)
+        setSurname(user.cognome)
+        setEmail(user.email)
+        setPhone("1234567890")
+    }
+    useEffect(()=>{
+        getInfoUser()
+    },[])
 
 
       const logout = async() =>{

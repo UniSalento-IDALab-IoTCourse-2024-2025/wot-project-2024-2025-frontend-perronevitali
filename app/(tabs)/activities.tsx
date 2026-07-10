@@ -1,11 +1,16 @@
 import { useState,useEffect } from 'react';
-import { Platform, Text, StyleSheet, TouchableOpacity,ScrollView,View } from 'react-native';
+import { Platform, Text, StyleSheet, TouchableOpacity,ScrollView,View, Modal } from 'react-native';
+import {Divider} from "react-native-elements";
 import Feather from '@expo/vector-icons/Feather';
 
 export default function MessageScreen() {
-    const clickMessage = () =>{
-        console.log("Mi ha cliccato")
-     }
+    const [isModalVisible,setModalVisible] = useState(false);
+    const openModal = () =>{
+        setModalVisible(true)
+    }
+    const closeModal = () =>{
+        setModalVisible(false)
+    }
     return (
         <ScrollView style={{backgroundColor:'#ffa420'}}>
             <Text style={styles.start}>I tuoi messaggi</Text>
@@ -16,7 +21,7 @@ export default function MessageScreen() {
                            Zona 1
                        </Text>
                    </View>
-                    <TouchableOpacity onPress={clickMessage}>
+                    <TouchableOpacity onPress={openModal}>
                    <Feather
                        name="external-link"
                        size={28}
@@ -26,6 +31,23 @@ export default function MessageScreen() {
                     </TouchableOpacity>
                </View>
            </View>
+           <Modal
+                visible={isModalVisible}
+                transparent={true}
+                animationType="slide"
+                onRequestClose={closeModal}
+           >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
+                            <Text style={styles.closeButtonText}>X</Text>
+                        </TouchableOpacity>
+                        <Divider style={{ backgroundColor: '#ffa420', marginVertical: 1,  width:"30%",  alignSelf: 'center', height:5 }} />
+                        <Divider style={{ backgroundColor: '#ccc', marginVertical: 10 }} />
+                        <Text style={styles.modalText}>Testo</Text>
+                    </View>
+                </View>
+           </Modal>
         </ScrollView>
     )
 
@@ -128,4 +150,33 @@ const styles = StyleSheet.create({
   label: {
       margin: 8,
     },
+  modalOverlay: {
+        flex: 1,
+        //backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+       backgroundColor: '#2c2e52',
+       padding: 20,
+       borderTopLeftRadius: 20,
+       borderTopRightRadius: 20,
+       minHeight: 200,
+    },
+    closeButton: {
+      position: 'absolute',
+      top: 10,
+      right: 10,
+      zIndex: 1,
+    },
+    closeButtonText: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: 'red',
+     },
+     modalText:{
+         fontSize: 24,
+         marginTop: 10,
+         fontWeight: 'bold',
+         color: 'white'
+     }
 });

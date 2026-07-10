@@ -13,59 +13,93 @@ import CryptoJS from "crypto-js";
 import { PlatformConstants } from 'react-native';
 import BeaconNativeScanner from '../../modules/beacon-native-scanner';
 import BleManager from "react-native-ble-manager";
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL,API_PORT_OS,API_PORT_US } from '@/constants/api';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const NAME="BlueUp-01-021238";
-  useEffect(() => {
-    BleManager.start({ showAlert: false });
-    const MAC = "C2:74:C5:9E:62:C1";
+  const endpointUS = API_BASE_URL+API_PORT_US
+  const endpointOS = API_BASE_URL+API_PORT_OS
+  const [areas,setAreas] = useState([])
+  const [beacons,setBeacons] = useState([])
+  const [authorizedAreas,setAuthorizedAreas]  = useState([])
+  const [user,setUser] = useState(null)
+  const fetchData = async () =>{
+   const token = await AsyncStorage.getItem("token")
+   await Promise.all([
+        getAreas(token),
+        getAuthorizedAreas(token)
+      ])
+  }
+  const getAreas = async (token) =>{
 
-    const listener = BleManager.onDiscoverPeripheral((peripheral) => {
-
-      if (peripheral.id !== MAC) {
-        return;
+      const url = endpointOS+'/api/areas/'
+      try{
+          const response = await fetch(url,{
+              method: 'GET',
+              headers:{
+                  'Content-Type': 'application/json',
+                  'Authorization': 'Bearer '+token
+             }
+          })
+          if(!response.ok){
+              console.log(response.status)
+          }else{
+               const data = await response.json()
+               const areas = data.areas.areasList
+               setAreas(areas)
+               let macs = new Array()
+               for(let area in areas)
+                   macs.push(areas[area]["beaconMAC"])
+               setBeacons(macs)
+          }
+      }catch(e){
+          console.log("Errore chiamata API GET AREAS:",e)
       }
+   }
+   const getAuthorizedAreas = async(token) =>{
+       try{
+           const user = JSON.parse(await AsyncStorage.getItem("user"))
+           setUser(user)
+           const idW = user["id"]
+           const url = endpointUS+"/api/workers/"+idW
+           console.log(url)
 
-      console.log("===== TROVATO =====");
-      console.log(JSON.stringify(peripheral, null, 2));
+           const response = await fetch(url,{
+               method: 'GET',
+               headers:{
+                   'Content-Type': 'application/json',
+                   'Authorization': 'Bearer '+token
+               }
+          })
+          if(!response.ok){
+              console.log(response.status)
+          }else{
+            const data = await response.json()
+            const workAreaList = data.workers.workersList[0].authorizedAreaIds
+            setAuthorizedAreas(workAreaList)
+          }
+      }catch(e){
+        console.log("Errore chiamata API GET AREA WORKER",e)
+      }
+   }
+  useEffect(()=>{
+      fetchData()
+  },[])
 
-    });
+  useEffect(()=>{
+    if(beacons.length > 0){
+      BeaconService.startAll(beacons,user.id)
+    }
+  },[beacons])
 
-    return () => {
-      listener.remove();
-      stopListener.remove();
-    };
-  }, []);
+  useEffect(()=>{
+      //console.log('Aree:', areas)
+    },[areas])
 
-
-  const handleBleManagerScan = async () => {
-
-    console.log("SCAN BLE MANAGER");
-
-    await BleManager.scan({
-      serviceUUIDs: [],
-      seconds: 10,
-      allowDuplicates: true,
-      scanningMode: 2
-    });
-
-  };
-
-  //const bleManager = new BleManager();
-
-  // Function to start scanning BLE devices
-  function startScanning() {
-      BeaconService.startScanning()
-  }
-  // Stop scanning if necessary
-  function stopScanning() {
-
-    BeaconService.stopScanning();
-  }
-
-  //const { status, connectedDevice, beaconData, errorMessage, isBluetoothOn, scanAndConnect, disconnect } = useBle();
+  useEffect(()=>{
+    //console.log('Aree autorizzate aggiornate:', authorizedAreas)
+  },[authorizedAreas])
 
   const handleExit = async () => router.replace('/login');
 
@@ -180,16 +214,6 @@ export default function HomeScreen() {
               <TouchableOpacity onPress={handleBlePress} style={styles.buttonBle}>
                 <Text style={styles.textbutton}>
                     Scansione
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={stopScanning} style={styles.buttonBle}>
-                    <Text style={styles.textbutton}>
-                                  Stoppa scandsione
-                    </Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleBleManagerScan} style={styles.buttonBle}>
-                <Text style={styles.textbutton}>
-                      Scansione 2
                 </Text>
               </TouchableOpacity>
             </ThemedView>

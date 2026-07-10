@@ -3,13 +3,13 @@ import { View, Label, Text, TextInput, StyleSheet, TouchableOpacity,Button } fro
 import { Divider } from 'react-native-elements';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import { API_BASE_URL,API_PORT_US } from '@/constants/api';
 export default function LoginScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const router = useRouter();
-
+  const endpoint = API_BASE_URL+API_PORT_US;
   const handleLogin = async () => {
 
     //const invokeUrl = 'https://auoobynp11.execute-api.us-east-1.amazonaws.com/ReviewSwapp'
@@ -21,7 +21,9 @@ export default function LoginScreen() {
                 'email':username,
                 'password':password
             }
-            const response = await fetch('http://100.81.116.116:8080/api/users/authenticate',{
+            const url = endpoint+'/api/authenticate/'
+            console.log(url)
+            const response = await fetch(url,{
                 method: 'POST',
                 headers:{
                    'Content-Type': 'application/json',
@@ -31,16 +33,14 @@ export default function LoginScreen() {
             if(!response.ok){
                 console.log(response.status)
                 console.log('Credenziali errate')
-                await AsyncStorage.setItem('userRole', 'admin');
-                 router.push('/')
                 setError('Credenziali errate')
             }else{
                  const data = await response.json();
-
-                 const {jwt} = data;
-                 if(jwt){
-                     await AsyncStorage.setItem('userRole', 'worker');
-                    router.push('/')
+                 const {token} = data;
+                 if(token){
+                     //console.log(token)
+                     seeUser(token,username)
+                     await AsyncStorage.setItem("token",token)
                  }
              }
         }catch(e){
@@ -49,6 +49,60 @@ export default function LoginScreen() {
     }
   };
 
+  const seeUser = async (token,emailUser) =>{
+      let loggedUser = null
+      try{
+          const url = endpoint+'/api/workers/'
+          const response = await fetch(url,{
+              method: 'GET',
+              headers:{
+                  'Content-Type': 'application/json',
+                  'Authorization': 'Bearer '+token
+              }
+          })
+          if(!response.ok){
+              console.log(response.status)
+          }else{
+              const data = await response.json()
+              const workers = data.workers.workersList
+              loggedUser = workers.find(({email})=>email===emailUser)
+              if(loggedUser){
+                  console.log("WORKER")
+                  await AsyncStorage.setItem('userRole', 'worker')
+                  await AsyncStorage.setItem('user',JSON.stringify(loggedUser))
+                  router.push('/')
+             }
+          }
+      }catch(e){
+          console.log("Errore chiamata API GET WORKER:",e)
+      }
+
+     try{
+          const url = endpoint+'/api/admins/'
+          const response = await fetch(url,{
+              method: 'GET',
+              headers:{
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer '+token
+             }
+          })
+         if(!response.ok){
+            console.log(response.status)
+         }else{
+            const data = await response.json()
+            const admins = data.admins.adminsList
+            loggedUser = admins.find(({email})=>email===emailUser)
+            if(loggedUser){
+                console.log("ADMIN")
+                await AsyncStorage.setItem('userRole', 'admin')
+                await AsyncStorage.setItem('user',JSON.stringify(loggedUser))
+                router.push('/')
+            }
+         }
+    }catch(e){
+        console.log("Errore chiamata API GET ADMIN:",e)
+    }
+  }
   return(
       <>
         <View style={styles.container}>
