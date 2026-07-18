@@ -1,44 +1,20 @@
 import { BleManager, Service, ScanMode} from 'react-native-ble-plx';
-import {useState} from "react";
-import { Client } from '@stomp/stompjs';
+import { getExistingStompClient, isStompReady, switchAreaSubscription } from './stompClient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
    const bleManager = new BleManager();
    let isScanning = false;
    let stateSubscription = null;
    let stompReady = false;
-   let prev=0
    let idRabbit=""
+   let curr_area=null
+   let prev_area=null
+   let client = null;
    const BeaconService = {
        startAll,
        startScanning,
        stopScanning
    };
-
-   let powb1=0,powb2=0
-   const client = new Client({
-     brokerURL: 'ws://100.65.22.118:15674/ws',
-     connectHeaders: {
-       login: 'FARO',
-       passcode: 'FARO',
-     },
-    forceBinaryWSFrames: true,
-    appendMissingNULLonIncoming: true,
-     debug: (str) => console.log('STOMP DEBUG:', str),
-       onConnect: () => {
-         console.log('STOMP CONNESSO');
-         client.subscribe('/queue/faro.inbox.'+idRabbit, onPersonalMessage);
-         stompReady=true
-       },
-       onStompError: (frame) => {
-         console.log('STOMP ERROR:', frame.headers['message'], frame.body);
-       },
-       onWebSocketError: (event) => {
-         console.log('WEBSOCKET ERROR:', event.message || event);
-       },
-       onDisconnect: () => {
-         console.log('STOMP DISCONNESSO');
-     }
-   });
 
    //function cconnectTorabbit(){}
    /*const client = mqtt.connect('ws://100.65.22.118:15674/ws', {
@@ -57,17 +33,20 @@ import { Client } from '@stomp/stompjs';
   });*/
 
 
- function startAll (macs,idWorker){
+ function startAll (zones,idWorker){
       idRabbit=idWorker
       if (stateSubscription) {
-          console.log("Listener BLE già attivo, skip");
           return;
       }
-      client.activate();
+      client = getExistingStompClient();
+      if (!client || !isStompReady()) {
+            console.warn('STOMP non ancora pronto, impossibile avviare beacon service');
+            return;
+      }
       stateSubscription = bleManager.onStateChange((state) => {
           console.log(state);
           if (state === "PoweredOn") {
-            startScanning(macs, idWorker);
+            startScanning(zones, idWorker);
           }
           if (state === "PoweredOff") {
             alert("Bluetooth spento");
@@ -82,15 +61,12 @@ import { Client } from '@stomp/stompjs';
       console.log("Messaggio ricevuto:", message.body);
   }
 
-  function startScanning (macs,idWorker){
-      console.log("MAC TO SEARCH",macs)
-      console.log("RABBIT key",idWorker)
+  function startScanning (zones,idWorker){
       if(isScanning){
           console.log("Scansione già avviata")
           return
       }
       console.log("Inizio scansione")
-      console.log('client.connected al momento del publish:', client.connected);
       bleManager.startDeviceScan(null,  {allowDuplicates: true, legacyScan: false }, (error, scannedDevice) => {
       if (error) {
           if(error.errorCode!==102)
@@ -98,43 +74,93 @@ import { Client } from '@stomp/stompjs';
         return;
       }
       if (scannedDevice) {
-            /*if (scannedDevice.id !== "C2:74:C5:9E:62:C1" && scannedDevice.id !== "F8:C2:9B:71:FC:26") return;
-            else if(scannedDevice.id==="C2:74:C5:9E:62:C1")
-                powb1=scannedDevice.rssi
-            else
-                powb2=scannedDevice.rssi
-            if(powb1===0 || powb2===0)
-                return;
-            else if(powb1>=powb2)
-                console.log("Sei piu vicino al dispositivo C2:74:C5:9E:62:C1")
-            else
-                console.log("Sei piu vicino al dispositivo F8:C2:9B:71:FC:26")*/
-            if(prev===0){
-                if(client.connected){
-                    const date = new Date()
-                    const message = JSON.stringify(
-                        {
-                            "type":"POSITION_UPDATE",
-                            "timestamp":date,
-                            "payload":{
-                                "areaId":"cassacarragnu",
-                                "previousAreaId":"42r24r24r42r43t432t25",
-                            }
-                        })
-                    client.subscribe(`/exchange/faro.areas/area.cassacarragnu`, (message) => {
-                        console.log('Messaggio ricevuto:', JSON.parse(message.body));
-                    });
-                    client.publish({
-                        destination: "/exchange/faro.outbox/"+idWorker,
-                        headers: {type:"POSITION_UPDATE"},
-                        body: message
-                    })
-                    prev=1
-                    console.log("Messaggio pubblicato")
-                }else{
-                    console.log("STOMP non ancora connesso, scarto questo tentativo")
-                }
-            }
+          const devicefounded = zones.find(({mac})=>mac===scannedDevice.id)
+          if(devicefounded===null || devicefounded===undefined){
+              //console.log("Nessun dispositivo trovato")
+              return;
+          }
+          //Primo dispositivo trovato
+          if(curr_area===null){
+              curr_area=devicefounded
+              curr_area["power"]=scannedDevice.rssi
+              prev_area=devicefounded
+              prev_area["power"]=scannedDevice.rssi
+              if(client.connected){
+                  switchAreaSubscription(devicefounded.area)
+                  const date = new Date()
+                  const message = JSON.stringify(
+                      {
+                          "type":"POSITION_UPDATE",
+                          "timestamp":date,
+                          "payload":{
+                            "areaId": devicefounded.area,
+                            "previousAreaId": prev_area.area,
+                          }
+                      })
+                  client.publish({
+                      destination: "/exchange/faro.outbox/"+idWorker,
+                      headers: {type:"POSITION_UPDATE"},
+                      body: message
+                  })
+                  console.log("Messaggio pubblicato")
+                  setCurrentArea(devicefounded.area)
+              }
+              return;
+          }else{
+              curr_area=devicefounded
+              curr_area["power"]=scannedDevice.rssi
+          }
+
+         if(curr_area["area"]!==prev_area["area"] && curr_area["power"]>prev_area["power"]){
+            console.log("Ti sei allontanato da",prev_area,"ma ti sei avvicinato a",curr_area)
+            prev_area=curr_area
+            curr_area=devicefounded.area
+            console.log(devicefounded)
+            if(client.connected){
+                switchAreaSubscription(devicefounded.area)
+                const date = new Date()
+                const message = JSON.stringify(
+                    {
+                        "type":"POSITION_UPDATE",
+                        "timestamp":date,
+                        "payload":{
+                            "areaId": devicefounded.area,
+                            "previousAreaId": prev_area.area,
+                        }
+                })
+                client.publish({
+                    destination: "/exchange/faro.outbox/"+idWorker,
+                    headers: {type:"POSITION_UPDATE"},
+                    body: message
+                })
+                console.log("Messaggio pubblicato")
+                setCurrentArea(devicefounded.area)
+            }else{
+                console.log("STOMP non ancora connesso, scarto questo tentativo")
+           }
+         }
+          /*if(client.connected){
+
+              const date = new Date()
+              const message = JSON.stringify(
+                  {
+                      "type":"POSITION_UPDATE",
+                      "timestamp":date,
+                      "payload":{
+                          "areaId":"cassacarragnu",
+                          "previousAreaId":"42r24r24r42r43t432t25",
+                      }
+                  })
+                  client.publish({
+                      destination: "/exchange/faro.outbox/"+idWorker,
+                      headers: {type:"POSITION_UPDATE"},
+                      body: message
+                  })
+                  console.log("Messaggio pubblicato")
+          }else{
+
+          }*/
+
             /*
             if (client.connected) {
                 const payload = JSON.stringify({
@@ -154,5 +180,8 @@ import { Client } from '@stomp/stompjs';
         console.log("Ferma scansione")
         bleManager.stopDeviceScan();
         isScanning=false
+    }
+    const setCurrentArea = async (area)=>{
+        await AsyncStorage.setItem("currArea",area)
     }
 export default BeaconService;
