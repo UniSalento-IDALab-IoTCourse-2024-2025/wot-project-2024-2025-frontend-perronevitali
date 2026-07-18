@@ -1,11 +1,66 @@
-import { useState,useEffect } from 'react';
+import { useState,useEffect,useRef } from 'react';
 import { Platform, Text, StyleSheet, TouchableOpacity,ScrollView,View,Modal } from 'react-native';
 import {Divider} from "react-native-elements";
 import Feather from '@expo/vector-icons/Feather';
+import {useStomp} from '@/hooks/use-stomp';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function MessageScreen() {
 
     const [isModalVisible,setModalVisible] = useState(false);
+    const [user,setUser] = useState(null)
+    const [areas,setAreas] = useState([])
+    //const intervalRef = useRef(null);
+    const { client, ready } = useStomp(user?.id,areas);
+    let messages = new Array()
+    const getUser = async ()  =>{
+         const user_raw = await AsyncStorage.getItem("user")
+        setUser(JSON.parse(user_raw))
+    }
+    const getAreas = async () =>{
+        const raw_areas = await AsyncStorage.getItem("idAreas")
+        setAreas(JSON.parse(raw_areas))
+    }
+    const readLastMessage = async () =>{
+        let lastMessage = JSON.parse(await AsyncStorage.getItem("lastAreaMessage"))
+        if(!lastMessage)
+            return;
+        if(!lastMessage.read){
+            lastMessage["read"]=true
+            await AsyncStorage.setItem("lastAreaMessage",JSON.stringify(lastMessage))
+            messages = await AsyncStorage.getItem("messages")
+            messages.push(lastMessage)
+            await AsyncStorage.setItem("messages",JSON.stringify(messages))
+        }
+    }
+    const getLastMessage = async() =>{
+        //intervalRef.current = setInterval(readLastMessage,2000)
+        readLastMessage()
+    }
+    useEffect(()=>{
+        getUser()
+        getAreas()
+        getLastMessage()
+        /*return () => {
+            if (intervalRef.current) clearInterval(intervalRef.current);
+        }*/
+    },[])
+    /*useEffect(() => {
+      if (!ready || !client) return;
+      console.log(areas)
+      for(let idArea in areas){
+          const sub = client.subscribe(
+            '/exchange/faro.areas/area.'+areas[idArea],
+            (message) => {
+              console.log('Message ricevuto:', JSON.parse(message.body));
+            }
+          );
+     }
+
+      return () => sub.unsubscribe();
+    }, [ready, client]);*/
+
+
     const openModal = () =>{
             setModalVisible(true)
     }
@@ -16,14 +71,15 @@ export default function MessageScreen() {
         <ScrollView style={{backgroundColor:'#ffa420'}}>
             <Text style={styles.start}>I tuoi messaggi</Text>
            <View style={styles.container}>
-               <View style={styles.boxMessage}>
+               {messages.map((message,key)=>
+               <View key={key} style={styles.boxMessage}>
                    <View style={styles.textContainer}>
                        <Text style={styles.message}>
-                           Messaggio 1
+                           Messaggio {key+1}
                        </Text>
 
                        <Text style={styles.hourMessage}>
-                           28/06/2026{"\t"}{"\t"}{"\t"}{"\t"}{"\t"}{"\t"}14:30
+                          {message.timestamp}{"\t"}{"\t"}{"\t"}{"\t"}{"\t"}{"\t"}14:30
                        </Text>
                    </View>
                     <TouchableOpacity onPress={openModal}>
@@ -34,7 +90,7 @@ export default function MessageScreen() {
 
                    />
                     </TouchableOpacity>
-               </View>
+               </View>)}
            </View>
            <Modal
                 visible={isModalVisible}

@@ -1,6 +1,8 @@
-import { useState,useEffect } from 'react';
+import { useState,useEffect,useRef } from 'react';
 import { Image } from 'expo-image';
-import { Platform, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View,Platform,ScrollView, Text, StyleSheet, TouchableOpacity,Button,Modal } from 'react-native';
+import { RadioButton } from 'react-native-paper';
+import {Divider} from "react-native-elements";
 import * as Notifications from 'expo-notifications';
 import { HelloWave } from '@/components/hello-wave';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
@@ -15,6 +17,7 @@ import BeaconNativeScanner from '../../modules/beacon-native-scanner';
 import BleManager from "react-native-ble-manager";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL,API_PORT_OS,API_PORT_US } from '@/constants/api';
+import {useStomp} from '@/hooks/use-stomp';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -23,13 +26,30 @@ export default function HomeScreen() {
   const [areas,setAreas] = useState([])
   const [beacons,setBeacons] = useState([])
   const [authorizedAreas,setAuthorizedAreas]  = useState([])
+  const [idAreas,setIdAreas] = useState([])
+  const intervalRefAreas = useRef(null);
+  const intervalRefAuthAreas = useRef(null);
+  const intervalRefCurrArea= useRef(null);
+  const [intervalID,setIntervalID] = useState(0)
   const [user,setUser] = useState(null)
+  const [isModalVisible,setModalVisible] = useState(false);
+  const { client, ready } = useStomp(user?.id);
+  const [currentArea, setCurrentArea] = useState(null);
+  const [selectedArea,setSelectedArea] = useState(null);
+  const getCurrentArea = async () => {
+      setCurrentArea(await AsyncStorage.getItem("currArea"))
+  }
   const fetchData = async () =>{
    const token = await AsyncStorage.getItem("token")
-   await Promise.all([
-        getAreas(token),
-        getAuthorizedAreas(token)
-      ])
+   if(token==="" || token===null){
+        router.replace("login")
+        return;
+   }
+   getAreas(token)
+   getAuthorizedAreas(token)
+   intervalRefAreas.current = setInterval(() => getAreas(token), 10000)
+   intervalRefAuthAreas.current = setInterval(() => getAuthorizedAreas(token), 10000)
+   intervalRefCurrArea.current = setInterval(() => getCurrentArea(), 1000)
   }
   const getAreas = async (token) =>{
 
@@ -43,15 +63,31 @@ export default function HomeScreen() {
              }
           })
           if(!response.ok){
-              console.log(response.status)
+              console.log(response.status,": api/areas/")
+              router.replace("/login")
           }else{
                const data = await response.json()
                const areas = data.areas.areasList
                setAreas(areas)
-               let macs = new Array()
-               for(let area in areas)
-                   macs.push(areas[area]["beaconMAC"])
-               setBeacons(macs)
+               let idAreas = new Array()
+               for( let idArea in areas){
+                    const id = areas[idArea]["id"]
+                    idAreas.push(id)
+               }
+               setIdAreas(idAreas)
+
+               await AsyncStorage.setItem("idAreas",JSON.stringify(idAreas))
+               let zones = new Array()
+               for(let area in areas){
+                   //tutte le zone avranno inizializzata la potenza a 0
+                   const zone = {
+                       "mac": areas[area]["beaconMAC"],
+                       "area": areas[area]["id"],
+                       "power": 0
+                   }
+                   zones.push(zone)
+               }
+               setBeacons(zones)
           }
       }catch(e){
           console.log("Errore chiamata API GET AREAS:",e)
@@ -63,7 +99,6 @@ export default function HomeScreen() {
            setUser(user)
            const idW = user["id"]
            const url = endpointUS+"/api/workers/"+idW
-           console.log(url)
 
            const response = await fetch(url,{
                method: 'GET',
@@ -73,7 +108,8 @@ export default function HomeScreen() {
                }
           })
           if(!response.ok){
-              console.log(response.status)
+              console.log(response.status,": api/workers/")
+              router.replace("/login")
           }else{
             const data = await response.json()
             const workAreaList = data.workers.workersList[0].authorizedAreaIds
@@ -84,24 +120,36 @@ export default function HomeScreen() {
       }
    }
   useEffect(()=>{
-      fetchData()
+     fetchData()
+     return () => {
+         if (intervalRefAreas.current) clearInterval(intervalRefAreas.current);
+         if (intervalRefAuthAreas.current) clearInterval(intervalRefAuthAreas.current);
+         if (intervalRefCurrArea.current) clearInterval(intervalRefCurrArea.current);
+     }
+
   },[])
 
   useEffect(()=>{
-    if(beacons.length > 0){
+    if(beacons.length > 0 && ready && user?.id){
       BeaconService.startAll(beacons,user.id)
     }
-  },[beacons])
+  },[beacons, ready, user])
 
   useEffect(()=>{
-      //console.log('Aree:', areas)
     },[areas])
 
   useEffect(()=>{
-    //console.log('Aree autorizzate aggiornate:', authorizedAreas)
   },[authorizedAreas])
 
   const handleExit = async () => router.replace('/login');
+
+   const openModal = (area) =>{
+       setModalVisible(true)
+       setSelectedArea(area)
+   }
+   const closeModal = () =>{
+       setModalVisible(false)
+   }
 
   const testNotifica = async () => {
     try {
@@ -193,77 +241,224 @@ export default function HomeScreen() {
     }
   };*/
 
+  const getStatusString = (status) =>{
+      switch(status){
+        case 0: return "CALM";
+        case 1: return "ALERT";
+        case 99: return "DANGER";
+        default: return "UNKNOWN";
+      }
+  }
   return (
-      <ParallaxScrollView
-            headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-            headerImage={
-              <Image
-                source={require('@/assets/images/partial-react-logo.png')}
-                style={styles.reactLogo}
-              />
-            }>
-
-            <ThemedView style={styles.titleContainer}>
-              <ThemedText type="title">Welcome!</ThemedText>
-              <HelloWave />
-            </ThemedView>
-
-            <ThemedView style={styles.stepContainer}>
-              <ThemedText type="subtitle">Bluetooth</ThemedText>
-
-              <TouchableOpacity onPress={handleBlePress} style={styles.buttonBle}>
-                <Text style={styles.textbutton}>
-                    Scansione
-                </Text>
-              </TouchableOpacity>
-            </ThemedView>
-
-            {/* ── Sezione Notifiche ─────────────────────────────────── */}
-            <ThemedView style={styles.stepContainer}>
-              <ThemedText type="subtitle">Notifiche</ThemedText>
-
-              <TouchableOpacity onPress={testNotifica} style={styles.buttonNotifica}>
-                <Text style={styles.textbutton}>Testa Notifica</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity onPress={handleExit} style={styles.button}>
-                <Text style={styles.textbutton}>Esci</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity onPress={simulaNotificaRemota} style={styles.buttonNotifica}>
-                <Text style={styles.textbutton}>Simula Notifica Remota</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={testConversion} style={styles.buttonNotifica}>
-                <Text style={styles.textbutton}>Test conversione</Text>
-              </TouchableOpacity>
-            </ThemedView>
-          </ParallaxScrollView>
+      <View style={styles.container}>
+        <Text style={styles.start}>Aree</Text>
+        <ScrollView style={{backgroundColor:'#ffa420'}}>
+        {areas?.map((area,index)=>
+            <View style={authorizedAreas?.find((auth)=>auth==area.id) ? styles.boxAreaAuth : styles.boxAreaAuthNot} key={index}>
+                <Text style={styles.message}> {area.name} </Text>
+                <Text style={styles.textbutton}> Stato area: {getStatusString(area.status)}</Text>
+                <Text style ={styles.textbutton}> Numero di lavoratori : {area.workerIdsInArea.length}</Text>
+                 <View style={styles.radioContainer}>
+                     <RadioButton
+                         value={area.id}
+                         status={currentArea === area.id ? 'checked' : 'unchecked'}
+                         onPress={() => setCurrentArea(area.id)}
+                         color="white"
+                         uncheckedColor="white"
+                     />
+                 </View>
+                <View style={styles.buttonlist}>
+                    <View style={{ marginHorizontal: 20 }}>
+                             <Button title="Vedi Task Area" color="#ffa420" />
+                    </View>
+                    <View style={{ marginHorizontal: 20 }}>
+                         <Button title="Informazioni Area" color="#ffa420" onPress={()=>{openModal(area)}}/>
+                    </View>
+                </View>
+            </View>
+        )}
+        <Modal
+            visible={isModalVisible}
+            transparent={true}
+            animationType="slide"
+            onRequestClose={closeModal}
+        >
+            <View style={styles.modalOverlay}>
+                <View style={styles.modalContent}>
+                    <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
+                         <Text style={styles.closeButtonText}>X</Text>
+                    </TouchableOpacity>
+                    <Divider style={{ backgroundColor: '#ffa420', marginVertical: 1,  width:"30%",  alignSelf: 'center', height:5 }} />
+                    <Divider style={{ backgroundColor: '#ccc', marginVertical: 10 }} />
+                    <Text style={styles.modalText}>Beacon: <Text style={styles.infoText}>{selectedArea?.beaconMAC}</Text> </Text>
+                    <Text style={styles.modalText}>Temperatura: <Text style={styles.infoText}>{selectedArea?.currentTemperature}</Text> </Text>
+                    <Text style={styles.modalText}>Umidità: <Text style={styles.infoText}>{selectedArea?.currentHumidity}</Text> </Text>
+                </View>
+            </View>
+        </Modal>
+         </ScrollView>
+      </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  stepContainer: { gap: 8, marginBottom: 8 },
-  reactLogo: { height: 178, width: 290, bottom: 0, left: 0, position: 'absolute' },
-  button: {
-    justifyContent: 'center', alignItems: 'center',
-    backgroundColor: 'green', height: 60, width: 200, borderRadius: 15,
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor:'#ffa420'
   },
-  buttonNotifica: {
-    justifyContent: 'center', alignItems: 'center',
-    backgroundColor: '#007AFF', height: 60, width: 200, borderRadius: 15,
+  start:{
+      fontSize: 30,
+      fontWeight: 'bold',
+      alignItems: 'left',
+      alignSelf: 'left',
+      color: 'white',
+      marginTop:50,
+      marginLeft: 10,
   },
-  buttonBle: {
-    justifyContent: 'center', alignItems: 'center',
-    backgroundColor: '#5856D6', height: 60, width: 200, borderRadius: 15,
+  boxAreaAuth: {
+      width: 340,
+      marginTop: 10,
+      marginBottom: 10,
+      padding: 10,
+      backgroundColor: 'green',
+      borderRadius: 10,
+      flexDirection: 'column',
+      alignItems: 'left',
+      justifyContent: 'space-between',
+      position: 'relative'
   },
-  textbutton: { fontSize: 18, fontWeight: 'bold', color: 'white' },
-  card: {
-    backgroundColor: '#1a1a2e',
-    borderRadius: 12,
-    padding: 16,
-    gap: 8,
+  boxAreaAuthNot: {
+        width: 340,
+        marginTop: 10,
+        marginBottom: 10,
+        padding: 10,
+        backgroundColor: 'red',
+        borderRadius: 10,
+        flexDirection: 'column',
+        alignItems: 'left',
+        justifyContent: 'space-between',
+        position: 'relative'
+    },
+  message:{
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: 'white'
   },
-  cardRow: { color: '#aaa', fontSize: 14 },
-  cardValue: { color: '#fff', fontWeight: 'bold' },
+  button:{
+    justifyContent: 'center',
+    alignItems:'center',
+    backgroundColor:'#ff4700',
+    height: 60,
+    width:200,
+    borderRadius:15
+  },
+  buttonlog:{
+    justifyContent: 'center',
+    alignItems:'center',
+    backgroundColor:'red',
+    height: 60,
+    width:200,
+    borderRadius:15
+  },
+  textContainer: {
+      flex: 1,
+  },
+  hourMessage: {
+      fontSize: 14,
+      color: '#cfcfcf',
+      marginTop: 4,
+  },
+
+  textbutton:{
+    fontSize:18,
+    fontWeight: 'bold',
+    color:'white'
+  },
+  rightContainer: {
+      alignItems: 'flex-end',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+   subtitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: 'blue'
+    },
+  input: {
+    width: 200,
+    height: 40,
+    margin: 10,
+    borderWidth: 1,
+    borderRadius: 5,
+    paddingLeft: 8,
+    backgroundColor:'white'
+  },
+  error: {
+    color: 'red',
+    marginTop: 10,
+  },
+  checkboxContainer: {
+      flexDirection: 'row',
+      marginBottom: 20,
+    },
+  checkbox: {
+      alignSelf: 'left',
+      marginTop: 10,
+      marginBottom: 10,
+      marginLeft: 10,
+    },
+  label: {
+      margin: 8,
+    },
+  modalOverlay: {
+        flex: 1,
+        //backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+       backgroundColor: '#2c2e52',
+       padding: 20,
+       borderTopLeftRadius: 20,
+       borderTopRightRadius: 20,
+       minHeight: 200,
+    },
+    closeButton: {
+      position: 'absolute',
+      top: 10,
+      right: 10,
+      zIndex: 1,
+    },
+    closeButtonText: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: 'red',
+     },
+     modalText:{
+         fontSize: 24,
+         marginTop: 10,
+         fontWeight: 'bold',
+         color: 'white'
+     },
+    buttonlist:{
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        flexDirection:'row',
+    },
+    radioContainer: {
+        position: 'absolute',
+        top: 10,
+        right: 10,
+    },
+    infoText:{
+        fontSize: 24,
+        fontWeight: 'bold',
+        alignItems: 'right',
+        alignSelf: 'right',
+        color: '#ffa420',
+    },
 });
