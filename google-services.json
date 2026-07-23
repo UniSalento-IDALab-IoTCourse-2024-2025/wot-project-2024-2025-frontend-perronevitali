@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "519062852039",
+    "project_id": "iot-app-notification-project",
+    "storage_bucket": "iot-app-notification-project.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:519062852039:android:2d8526d009b521c6c989e2",
+        "android_client_info": {
+          "package_name": "com.michelevitali1303.iotapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCKHuavSTc-dcc7a_b3dh_quAee7Mm6zU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

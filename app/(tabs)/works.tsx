@@ -1,8 +1,42 @@
 import { useState,useEffect } from 'react';
 import { Platform, Text, StyleSheet, TouchableOpacity,View,ScrollView,Modal} from 'react-native';
 import {Divider} from "react-native-elements";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL,API_PORT_OS,API_PORT_US } from '@/constants/api';
 
 export default function WorksScreen() {
+
+    const url = API_BASE_URL
+    const [works,setWorks] = useState([])
+    const getWorks = async () =>{
+        const token = await AsyncStorage.getItem("token")
+        const endpoint = url + API_PORT_OS + '/api/tasks/mine'
+        try{
+            const response = await fetch(endpoint,{
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+token
+                }
+
+            })
+            if(!response.ok){
+                console.log(response.status)
+            }else{
+                const data = await response.json()
+                let tasks = data.tasks.tasksList
+                tasks.push({"name":"ciao","timestamp":"timestamp"})
+                tasks.push({"name":"ciao2","timestamp":"timestamp2"})
+                tasks.push({"name":"ciao3","timestamp":"timestamp3"})
+                setWorks(tasks)
+            }
+        }catch(e){
+            console.log("Error API tasks/mine",e)
+        }
+    }
+    useEffect(()=>{
+        getWorks()
+    },[])
 
     const [isModalVisible,setModalVisible] = useState(false);
         const openModal = () =>{
@@ -20,20 +54,20 @@ export default function WorksScreen() {
     return (
         <ScrollView style={{backgroundColor:'#ffa420'}}>
             <Text style={styles.start}>Compiti da svolgere</Text>
-            <View style={styles.container}>
-                <TouchableOpacity style={styles.boxMessage} onPress={openModal}>
-                     <View style={styles.textContainer}>
-                        <Text style={styles.message}> Compito 1 </Text>
-                        <Text style={styles.hourMessage}>28/06/2026{"\t"}{"\t"}{"\t"}{"\t"}14:30</Text>
-                     </View>
-                 </TouchableOpacity>
-                 <TouchableOpacity style={styles.Cancelbutton} onPress={cancelWork}>
-                    <Text style={styles.message}> Annulla </Text>
-                 </TouchableOpacity>
-                 <TouchableOpacity style={styles.Perfbutton} onPress={executeWork}>
-                    <Text style={styles.message}> Svolto </Text>
-                 </TouchableOpacity>
-            </View>
+                {works?.map((work,key)=><View style={styles.container} key={key}>
+                    <TouchableOpacity style={styles.boxMessage} onPress={openModal}>
+                        <View style={styles.textContainer}>
+                            <Text style={styles.message}> Compito 1 </Text>
+                            <Text style={styles.hourMessage}>28/06/2026{"\t"}{"\t"}{"\t"}{"\t"}14:30</Text>
+                        </View>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.Cancelbutton} onPress={cancelWork}>
+                        <Text style={styles.message}> Annulla </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.Perfbutton} onPress={executeWork}>
+                        <Text style={styles.message}> Svolto </Text>
+                    </TouchableOpacity>
+               </View>)}
             <Modal
                 visible={isModalVisible}
                 transparent={true}
@@ -60,7 +94,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     //justifyContent: 'left',
-    padding: 5,
+    padding: 1,
     alignItems: 'left',
     backgroundColor:'#ffa420',
     flexDirection: 'row',
@@ -75,8 +109,8 @@ const styles = StyleSheet.create({
   },
   boxMessage: {
       width: 200,
-      marginTop: 30,
-      marginBottom: 30,
+      marginTop: 10,
+      marginBottom: 10,
       padding: 10,
       backgroundColor: '#2c2e52',
       borderRadius: 10,
@@ -94,8 +128,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor:'#ff4700',
-    marginTop: 30,
-    marginBottom: 30,
+    marginTop: 10,
+    marginBottom: 10,
     marginLeft:10,
     width:30,
     borderRadius:5,
@@ -105,8 +139,8 @@ const styles = StyleSheet.create({
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor:'green',
-      marginTop: 30,
-      marginBottom: 30,
+      marginTop: 10,
+      marginBottom: 10,
       marginLeft:10,
       width:30,
       borderRadius:5,

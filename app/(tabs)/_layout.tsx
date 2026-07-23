@@ -44,8 +44,17 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Home',
+          href: isWorker ? undefined : null,
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
         }}
+      />
+      <Tabs.Screen
+          name="adminTabs/adminHome"
+          options={{
+              title: 'Home',
+              href: isAdmin ? undefined : null,
+              tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          }}
       />
       <Tabs.Screen
         name="message"
@@ -59,15 +68,9 @@ export default function TabLayout() {
           name="works"
           options={{
              title: 'work list',
+             href: isWorker ? undefined : null,
              tabBarIcon: ({ color }) => <FontAwesome5 name="clipboard-list" size={24} color={color} />,
           }}
-      />
-      <Tabs.Screen
-         name="activities"
-         options={{
-            title: 'activity',
-            tabBarIcon: ({ color }) => <Entypo name="warning" size={24} color={color} />,
-         }}
       />
       <Tabs.Screen
         name="profile"

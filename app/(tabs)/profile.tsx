@@ -11,14 +11,12 @@ export default function ProfileScreen() {
     const [id,setId] = useState('')
     const [surname,setSurname] = useState('');
     const [email,setEmail] = useState('');
-    const [phone,setPhone] = useState('');
 
     const getInfoUser = async () =>{
         const user = JSON.parse(await AsyncStorage.getItem("user"))
         setName(user.nome)
         setSurname(user.cognome)
         setEmail(user.email)
-        setPhone("1234567890")
     }
     useEffect(()=>{
         getInfoUser()
@@ -39,13 +37,11 @@ export default function ProfileScreen() {
               <Text style={styles.start}> Le tue infromazioni personali </Text>
                 <View style={styles.infotab1}>
                     <Text style={styles.text}>  Nome</Text>
-                    <TextInput  style={styles.input}  onChangeText={setName} editable={false} value={name}/>
+                    <TextInput  style={styles.input}  editable={false} value={name}/>
                     <Text style={styles.text}>  Cognome</Text>
-                    <TextInput style={styles.input}  onChangeText={setSurname} editable={false} value={surname}/>
-                    <Text style={styles.text}>  Telefono</Text>
-                    <TextInput style={styles.input}  onChangeText={setPhone} editable={false} value={phone}/>
+                    <TextInput style={styles.input}  editable={false} value={surname}/>
                     <Text style={styles.text}>  Email</Text>
-                    <TextInput style={styles.input} onChangeText={setEmail} editable={false} value={email}/>
+                    <TextInput style={styles.input} editable={false} value={email}/>
                 </View>
                 <View>
                     <TouchableOpacity onPress={logout} style={styles.buttonlog}>

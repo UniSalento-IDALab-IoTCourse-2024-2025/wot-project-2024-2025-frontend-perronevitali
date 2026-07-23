@@ -21,7 +21,8 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.michelevitali1303.iotapp"
+      "package": "com.michelevitali1303.iotapp",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "output": "static",

@@ -10,9 +10,11 @@ export default function MessageScreen() {
     const [isModalVisible,setModalVisible] = useState(false);
     const [user,setUser] = useState(null)
     const [areas,setAreas] = useState([])
+    const [messages,setMessages] =  useState([])
+    const [selectedMessage,setSelecetdMessage] = useState(null)
+    const intervalRefMessages = useRef(null);
     //const intervalRef = useRef(null);
     const { client, ready } = useStomp(user?.id,areas);
-    let messages = new Array()
     const getUser = async ()  =>{
          const user_raw = await AsyncStorage.getItem("user")
         setUser(JSON.parse(user_raw))
@@ -21,7 +23,7 @@ export default function MessageScreen() {
         const raw_areas = await AsyncStorage.getItem("idAreas")
         setAreas(JSON.parse(raw_areas))
     }
-    const readLastMessage = async () =>{
+    /*const readLastMessage = async () =>{
         let lastMessage = JSON.parse(await AsyncStorage.getItem("lastAreaMessage"))
         if(!lastMessage)
             return;
@@ -32,19 +34,26 @@ export default function MessageScreen() {
             messages.push(lastMessage)
             await AsyncStorage.setItem("messages",JSON.stringify(messages))
         }
-    }
-    const getLastMessage = async() =>{
-        //intervalRef.current = setInterval(readLastMessage,2000)
-        readLastMessage()
+    }*/
+    const getMessages = async() =>{
+        setMessages(JSON.parse(await AsyncStorage.getItem("mexs")))
+        console.log(messages)
     }
     useEffect(()=>{
-        getUser()
-        getAreas()
-        getLastMessage()
+        getMessages()
+        intervalRefMessages.current = setInterval(() => getMessages(), 10000)
         /*return () => {
             if (intervalRef.current) clearInterval(intervalRef.current);
         }*/
     },[])
+    const getDate = (timestamp) =>{
+            const date = new Date(timestamp)
+            return date.toLocaleDateString("it-IT")
+    }
+    const getHour = (timestamp) =>{
+        const date = new Date(timestamp)
+        return date.toLocaleTimeString("it-IT")
+    }
     /*useEffect(() => {
       if (!ready || !client) return;
       console.log(areas)
@@ -61,7 +70,8 @@ export default function MessageScreen() {
     }, [ready, client]);*/
 
 
-    const openModal = () =>{
+    const openModal = (message) =>{
+            setSelecetdMessage(message)
             setModalVisible(true)
     }
     const closeModal = () =>{
@@ -71,18 +81,18 @@ export default function MessageScreen() {
         <ScrollView style={{backgroundColor:'#ffa420'}}>
             <Text style={styles.start}>I tuoi messaggi</Text>
            <View style={styles.container}>
-               {messages.map((message,key)=>
+               {messages?.map((message,key)=>
                <View key={key} style={styles.boxMessage}>
                    <View style={styles.textContainer}>
                        <Text style={styles.message}>
-                           Messaggio {key+1}
+                           {message?.header}
                        </Text>
 
                        <Text style={styles.hourMessage}>
-                          {message.timestamp}{"\t"}{"\t"}{"\t"}{"\t"}{"\t"}{"\t"}14:30
+                          {getDate(message?.timestamp)}{"\t"}{"\t"}{"\t"}{"\t"}{"\t"}{"\t"}{getHour(message?.timestamp)}
                        </Text>
                    </View>
-                    <TouchableOpacity onPress={openModal}>
+                    <TouchableOpacity onPress={()=>{openModal(message)}}>
                    <Feather
                        name="external-link"
                        size={28}
@@ -105,7 +115,7 @@ export default function MessageScreen() {
                         </TouchableOpacity>
                         <Divider style={{ backgroundColor: '#ffa420', marginVertical: 1,  width:"30%",  alignSelf: 'center', height:5 }} />
                         <Divider style={{ backgroundColor: '#ccc', marginVertical: 10 }} />
-                        <Text style={styles.modalText}>Testo</Text>
+                        <Text style={styles.modalText}>{selectedMessage?.description}</Text>
                     </View>
                 </View>
            </Modal>

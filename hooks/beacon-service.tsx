@@ -109,9 +109,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
           }else{
               curr_area=devicefounded
               curr_area["power"]=scannedDevice.rssi
+              if(curr_area["area"]===prev_area["area"]){
+                  return;
+              }
           }
 
-         if(curr_area["area"]!==prev_area["area"] && curr_area["power"]>prev_area["power"]){
+         if(curr_area["power"]>prev_area["power"]){
             console.log("Ti sei allontanato da",prev_area,"ma ti sei avvicinato a",curr_area)
             prev_area=curr_area
             curr_area=devicefounded.area
@@ -181,7 +184,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
         bleManager.stopDeviceScan();
         isScanning=false
     }
-    const setCurrentArea = async (area)=>{
-        await AsyncStorage.setItem("currArea",area)
+    const setCurrentArea = async (areaID)=>{
+        await AsyncStorage.setItem("currAreaID",areaID)
+        const areas = JSON.parse(await AsyncStorage.getItem("areas"))
+        const currArea = areas.find(area => area.id === areaID)
+        await AsyncStorage.setItem("currArea",JSON.stringify(currArea))
     }
 export default BeaconService;

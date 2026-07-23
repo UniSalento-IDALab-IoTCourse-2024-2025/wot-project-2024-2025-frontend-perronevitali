@@ -28,7 +28,6 @@ export default function HomeScreen() {
   const [authorizedAreas,setAuthorizedAreas]  = useState([])
   const [idAreas,setIdAreas] = useState([])
   const intervalRefAreas = useRef(null);
-  const intervalRefAuthAreas = useRef(null);
   const intervalRefCurrArea= useRef(null);
   const [intervalID,setIntervalID] = useState(0)
   const [user,setUser] = useState(null)
@@ -37,7 +36,8 @@ export default function HomeScreen() {
   const [currentArea, setCurrentArea] = useState(null);
   const [selectedArea,setSelectedArea] = useState(null);
   const getCurrentArea = async () => {
-      setCurrentArea(await AsyncStorage.getItem("currArea"))
+      const currAreaID = await AsyncStorage.getItem("currAreaID")
+      setCurrentArea(currAreaID)
   }
   const fetchData = async () =>{
    const token = await AsyncStorage.getItem("token")
@@ -45,10 +45,12 @@ export default function HomeScreen() {
         router.replace("login")
         return;
    }
+   setUser(JSON.parse(await AsyncStorage.getItem("user")))
    getAreas(token)
-   getAuthorizedAreas(token)
+   setAuthorizedAreas(JSON.parse(await AsyncStorage.getItem("authArea")))
+   //getAuthorizedAreas(token)
    intervalRefAreas.current = setInterval(() => getAreas(token), 10000)
-   intervalRefAuthAreas.current = setInterval(() => getAuthorizedAreas(token), 10000)
+   //intervalRefAuthAreas.current = setInterval(() => getAuthorizedAreas(token), 10000)
    intervalRefCurrArea.current = setInterval(() => getCurrentArea(), 1000)
   }
   const getAreas = async (token) =>{
@@ -68,6 +70,17 @@ export default function HomeScreen() {
           }else{
                const data = await response.json()
                const areas = data.areas.areasList
+               areas.sort((a1,a2)=>{
+                   const nameA1= a1.name.toUpperCase()
+                   const nameA2= a2.name.toUpperCase()
+                   if (nameA1 < nameA2) {
+                       return -1;
+                   }
+                   if (nameA1 > nameA2) {
+                       return 1;
+                   }
+                   return 0;
+               })
                setAreas(areas)
                let idAreas = new Array()
                for( let idArea in areas){
@@ -77,6 +90,7 @@ export default function HomeScreen() {
                setIdAreas(idAreas)
 
                await AsyncStorage.setItem("idAreas",JSON.stringify(idAreas))
+               await AsyncStorage.setItem("areas",JSON.stringify(areas))
                let zones = new Array()
                for(let area in areas){
                    //tutte le zone avranno inizializzata la potenza a 0
@@ -93,37 +107,16 @@ export default function HomeScreen() {
           console.log("Errore chiamata API GET AREAS:",e)
       }
    }
-   const getAuthorizedAreas = async(token) =>{
-       try{
-           const user = JSON.parse(await AsyncStorage.getItem("user"))
-           setUser(user)
-           const idW = user["id"]
-           const url = endpointUS+"/api/workers/"+idW
+   const handleInfoArea = async (area) =>{
+       await AsyncStorage.setItem("infoArea",JSON.stringify(area))
+       router.push("/activity/activities")
 
-           const response = await fetch(url,{
-               method: 'GET',
-               headers:{
-                   'Content-Type': 'application/json',
-                   'Authorization': 'Bearer '+token
-               }
-          })
-          if(!response.ok){
-              console.log(response.status,": api/workers/")
-              router.replace("/login")
-          }else{
-            const data = await response.json()
-            const workAreaList = data.workers.workersList[0].authorizedAreaIds
-            setAuthorizedAreas(workAreaList)
-          }
-      }catch(e){
-        console.log("Errore chiamata API GET AREA WORKER",e)
-      }
-   }
-  useEffect(()=>{
+    }
+   useEffect(()=>{
      fetchData()
      return () => {
          if (intervalRefAreas.current) clearInterval(intervalRefAreas.current);
-         if (intervalRefAuthAreas.current) clearInterval(intervalRefAuthAreas.current);
+         //if (intervalRefAuthAreas.current) clearInterval(intervalRefAuthAreas.current);
          if (intervalRefCurrArea.current) clearInterval(intervalRefCurrArea.current);
      }
 
@@ -262,14 +255,13 @@ export default function HomeScreen() {
                      <RadioButton
                          value={area.id}
                          status={currentArea === area.id ? 'checked' : 'unchecked'}
-                         onPress={() => setCurrentArea(area.id)}
                          color="white"
                          uncheckedColor="white"
                      />
                  </View>
                 <View style={styles.buttonlist}>
                     <View style={{ marginHorizontal: 20 }}>
-                             <Button title="Vedi Task Area" color="#ffa420" />
+                             <Button title="Vedi Task Area" color="#ffa420" onPress={()=>{handleInfoArea(area)}} />
                     </View>
                     <View style={{ marginHorizontal: 20 }}>
                          <Button title="Informazioni Area" color="#ffa420" onPress={()=>{openModal(area)}}/>

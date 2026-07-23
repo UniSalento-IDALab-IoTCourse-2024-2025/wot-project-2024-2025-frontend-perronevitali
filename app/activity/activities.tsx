@@ -2,34 +2,93 @@ import { useState,useEffect } from 'react';
 import { Platform, Text, StyleSheet, TouchableOpacity,ScrollView,View, Modal } from 'react-native';
 import {Divider} from "react-native-elements";
 import Feather from '@expo/vector-icons/Feather';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
+import { API_BASE_URL,API_PORT_OS,API_PORT_US } from '@/constants/api';
 
-export default function MessageScreen() {
+export default function ActivitiesAreaScreen() {
+    const [area,setArea] = useState(null)
+    const [activites,setActivities] = useState([])
+    const [selectedActivity,setSelectedActivity] = useState(null)
+    const router = useRouter()
+    const getInfoArea = async () =>{
+        const area = JSON.parse(await AsyncStorage.getItem("infoArea"))
+        const token = await AsyncStorage.getItem("token")
+        setArea(area)
+        const endpoint = API_BASE_URL+API_PORT_OS+'/api/tasks?areaId='+area.id
+        try{
+            const response = await fetch(endpoint,{
+                method: 'GET',
+                headers:{
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+token
+                },
+           })
+
+           if(!response.ok){
+               console.log("Errore risposta /api/tasks?",response.status)
+           }else{
+               const data = await response.json()
+               console.log(data.tasks.tasksList[0])
+               setActivities(data.tasks.tasksList)
+           }
+        }catch(e){
+            console.log("Errore chiamata API /api/tasks",e)
+
+        }
+    }
+    useEffect(()=>{
+        getInfoArea()
+    },[])
+
     const [isModalVisible,setModalVisible] = useState(false);
-    const openModal = () =>{
+    const openModal = (activity) =>{
         setModalVisible(true)
+        setSelectedActivity(activity)
     }
     const closeModal = () =>{
         setModalVisible(false)
     }
+
+    const getDate = (timestamp) =>{
+        const date = new Date(timestamp)
+        return date.toLocaleDateString("it-IT")
+    }
+    const getHour = (timestamp) =>{
+        const date = new Date(timestamp)
+        return date.toLocaleTimeString("it-IT")
+    }
+
+    const comeBackToHome = () =>{
+        router.push("/")
+    }
     return (
         <ScrollView style={{backgroundColor:'#ffa420'}}>
-            <Text style={styles.start}>I tuoi messaggi</Text>
-           <View style={styles.container}>
-               <View style={styles.boxMessage}>
+            <Text style={styles.start}>Attività area {area?.name}</Text>
+            <View style={styles.container}>
+           {activites?.map((activity,key)=>
+               <View style={styles.boxMessage} key={key}>
                    <View style={styles.textContainer}>
-                       <Text style={styles.message}>
-                           Zona 1
-                       </Text>
+                        <Text style={styles.message}>
+                            {activity.nome}
+                        </Text>
+                        <Text style={styles.hourMessage}>
+                            {getDate(activity.createdAt)}{"\t"}{"\t"}{"\t"}{"\t"}{"\t"}{"\t"}{getHour(activity.createdAt)}
+                        </Text>
                    </View>
-                    <TouchableOpacity onPress={openModal}>
-                   <Feather
-                       name="external-link"
-                       size={28}
-                       color="#ff4700"
 
-                   />
-                    </TouchableOpacity>
+                   <TouchableOpacity onPress={()=>{openModal(activity)}}>
+                        <Feather
+                            name="external-link"
+                            size={28}
+                            color="#ff4700"
+                        />
+                   </TouchableOpacity>
                </View>
+           )}
+           <TouchableOpacity  style={styles.buttonlog} onPress={comeBackToHome}>
+                <Text style={styles.textbutton}>Torna alla Home</Text>
+           </TouchableOpacity>
            </View>
            <Modal
                 visible={isModalVisible}
@@ -44,7 +103,10 @@ export default function MessageScreen() {
                         </TouchableOpacity>
                         <Divider style={{ backgroundColor: '#ffa420', marginVertical: 1,  width:"30%",  alignSelf: 'center', height:5 }} />
                         <Divider style={{ backgroundColor: '#ccc', marginVertical: 10 }} />
-                        <Text style={styles.modalText}>Testo</Text>
+                        <Text style={styles.modalText}>Descrizione:</Text><Text style={styles.infoText}>{selectedActivity?.descrizione}</Text>
+                        <Text style={styles.modalText}>Sostanza:</Text><Text style={styles.infoText}>{selectedActivity?.substanceName}</Text>
+                        <Text style={styles.modalText}>Quantità:</Text><Text style={styles.infoText}>{selectedActivity?.substanceQuantity} litri</Text>
+                        <Text style={styles.modalText}>Indice pericolo:</Text><Text style={styles.infoText}>{Math.round(selectedActivity?.lwhi)}</Text>
                     </View>
                 </View>
            </Modal>
@@ -64,7 +126,8 @@ const styles = StyleSheet.create({
       fontSize: 24,
       fontWeight: 'bold',
       marginTop:40,
-      marginLeft: 10
+      marginLeft: 10,
+      color: 'white'
   },
   boxMessage: {
       width: 340,
@@ -93,7 +156,7 @@ const styles = StyleSheet.create({
   buttonlog:{
     justifyContent: 'center',
     alignItems:'center',
-    backgroundColor:'red',
+    backgroundColor:'#ff4700',
     height: 60,
     width:200,
     borderRadius:15
@@ -174,9 +237,16 @@ const styles = StyleSheet.create({
       color: 'red',
      },
      modalText:{
-         fontSize: 24,
+         fontSize: 19,
          marginTop: 10,
          fontWeight: 'bold',
          color: 'white'
-     }
+     },
+    infoText:{
+        fontSize: 19,
+        fontWeight: 'bold',
+        alignItems: 'right',
+        alignSelf: 'right',
+        color: '#ffa420',
+    },
 });

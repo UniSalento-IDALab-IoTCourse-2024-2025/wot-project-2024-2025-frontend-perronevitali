@@ -1,4 +1,6 @@
 import { Client } from '@stomp/stompjs';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
 
 let client = null;
 let stompReady = false;
@@ -6,7 +8,7 @@ const readyCallbacks = [];
 
 let currentAreaSub = null;
 let currentAreaId = null;
-
+let messages= new Array()
 export function getStompClient(idUser) {
   if (client) return client;
 
@@ -62,6 +64,8 @@ export function switchAreaSubscription(idArea) {
   currentAreaId = idArea;
 
   console.log('Sottoscritto alla nuova area:', idArea);
+  sendAlertNoAuth()
+  sendWarningMessage()
 }
 
 export function clearAreaSubscription() {
@@ -89,4 +93,66 @@ function onPersonalMessage(message) {
 }
 function onAreaMessage(message) {
   console.log('Messaggio area ricevuto:', JSON.parse(message.body));
+  const mex = JSON.parse(message.body)
+  const type = mex.type
+  switch(type){
+      case 'AREA_UNAUTHORIZED':
+          inviaNotifica("AVVISO FARO","Attenzione, sei entrato in un'area a cui non sei autorizzato!")
+          updanteMessageList(mex)
+          return;
+      default:
+          return;
+  }
+}
+const updanteMessageList = async(newMessage) =>{
+    const type = newMessage.type
+    let lastMessage = null
+    switch(type){
+        case 'AREA_UNAUTHORIZED':
+             lastMessage = {
+                "header": "Mancata autorizzazione area",
+                "description": "Sei appena entrato in un area a cui non sei autorizzato",
+                "timestamp": newMessage.timestamp
+            }
+    }
+    for(let i=messages.length-1; i>=0;i--){
+
+        if(JSON.stringify(lastMessage) === JSON.stringify(messages[i])){
+             console.log(comp)
+        }
+
+     }
+    messages.push(lastMessage)
+    await AsyncStorage.setItem("mexs",JSON.stringify(messages))
+}
+const inviaNotifica = async (title,body) =>{
+    try{
+        const { status: permStatus } = await Notifications.requestPermissionsAsync();
+        if (permStatus !== 'granted') { alert('Permessi negati: ' + permStatus); return; }
+        await Notifications.scheduleNotificationAsync({
+            content: { title: title, body: body,sound:'alarm.wav' },
+            trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+                seconds: 1,
+                channelId: 'default', },
+        });
+    }catch(e){
+        alert('Errore: ' + e);
+    }
+}
+const sendWarningMessage = async () =>{
+    let area = JSON.parse(await AsyncStorage.getItem("currArea"))
+    console.log(area.status)
+    if(area.status===99){
+        inviaNotifica("PERICOLO AREA!","EVACURARE L'AREA QUANTO PRIMA")
+    }
+}
+const sendAlertNoAuth = async () =>{
+    let area = JSON.parse(await AsyncStorage.getItem("currArea"))
+    const unworkers = area.unauthorizedWorkerIds
+    const unworkersl = area.unauthorizedWorkerIds.length
+    const user = JSON.parse(await AsyncStorage.getItem("user"))
+    const intruder = unworkers.find((unworker)=>unworker===user.id)
+    if(unworkersl>0 && !intruder){
+        inviaNotifica("AVVISO FARO","Attenzione, del personale non autorizzato è appena entrato nell'area!")
+    }
 }
