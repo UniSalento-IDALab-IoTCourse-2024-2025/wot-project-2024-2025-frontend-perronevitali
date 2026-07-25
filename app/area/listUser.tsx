@@ -1,14 +1,17 @@
 import { useState,useEffect,useRef } from 'react';
-import { View,Platform,ScrollView, Text, StyleSheet, TouchableOpacity,Button,Modal } from 'react-native';
-
-export default function AdminHome () {
+import { View,Platform,ScrollView, Text, StyleSheet, TouchableOpacity,Button,Modal,TextInput } from 'react-native';
+import {Divider} from "react-native-elements";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL,API_PORT_OS,API_PORT_US } from '@/constants/api';
+import { useRouter } from 'expo-router';
+export default function ListUserArea(){
     return(
         <View style={styles.container}>
-            <Text>admin home </Text>
+            <Text style={styles.start}>List User </Text>
         </View>
     )
-}
 
+}
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -169,4 +172,12 @@ const styles = StyleSheet.create({
         alignSelf: 'right',
         color: '#ffa420',
     },
+    addButton:{
+        width: 38,
+        height: 38,
+        borderRadius: 20,
+        backgroundColor: 'green',
+        justifyContent: 'center',
+        alignItems: 'center',
+    }
 });

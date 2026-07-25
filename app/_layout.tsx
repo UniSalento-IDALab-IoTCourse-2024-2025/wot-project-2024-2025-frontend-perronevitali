@@ -15,9 +15,6 @@ Notifications.setNotificationHandler({
       shouldSetBadge: false,
     }),
   });
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -33,7 +30,18 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(worker)" options={{ headerShown: false }} />
+         <Stack.Screen name="(admin)" options={{ headerShown: false }} />
+         <Stack.Screen name="index" options={{ headerShown: false }}/>
+         <Stack.Screen name="login" options={{ headerShown: false }}/>
+         <Stack.Screen name="activity/activities" options={{ headerShown: false }}/>
+         <Stack.Screen name="area/areaopt" options={{ headerShown: false }}/>
+         <Stack.Screen name="area/newarea" options={{ headerShown: false }}/>
+         <Stack.Screen name="area/thresholdarea" options={{ headerShown: false }}/>
+          <Stack.Screen name="area/listUser" options={{ headerShown: false }}/>
+         <Stack.Screen name="area/areaedit" options={{ headerShown: false }}/>
+         <Stack.Screen name="item/itemopt" options={{ headerShown: false }}/>
+         <Stack.Screen name="item/newitem" options={{ headerShown: false }}/>
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack>
       <StatusBar style="auto" />

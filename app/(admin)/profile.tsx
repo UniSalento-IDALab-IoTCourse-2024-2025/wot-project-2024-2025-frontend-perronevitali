@@ -35,7 +35,7 @@ export default function ProfileScreen() {
     return (
         <View style={styles.container}>
               <Text style={styles.start}> Le tue infromazioni personali </Text>
-                <View style={styles.infotab1}>
+                <View>
                     <Text style={styles.text}>  Nome</Text>
                     <TextInput  style={styles.input}  editable={false} value={name}/>
                     <Text style={styles.text}>  Cognome</Text>
@@ -64,11 +64,13 @@ const styles = StyleSheet.create({
   start:{
       fontSize: 24,
       fontWeight: 'bold',
-      marginTop:60
+      marginTop:60,
+      color: 'white'
     },
     text:{
         fontSize: 18,
         fontWeight: 'bold',
+        color: 'white',
     },
    button:{
     justifyContent: 'center',

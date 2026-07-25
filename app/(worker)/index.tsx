@@ -18,9 +18,11 @@ import BleManager from "react-native-ble-manager";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL,API_PORT_OS,API_PORT_US } from '@/constants/api';
 import {useStomp} from '@/hooks/use-stomp';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export default function HomeScreen() {
+export default function WorkerHome() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const endpointUS = API_BASE_URL+API_PORT_US
   const endpointOS = API_BASE_URL+API_PORT_OS
   const [areas,setAreas] = useState([])
@@ -110,7 +112,6 @@ export default function HomeScreen() {
    const handleInfoArea = async (area) =>{
        await AsyncStorage.setItem("infoArea",JSON.stringify(area))
        router.push("/activity/activities")
-
     }
    useEffect(()=>{
      fetchData()
@@ -244,13 +245,17 @@ export default function HomeScreen() {
   }
   return (
       <View style={styles.container}>
+        <ScrollView
+        style={{backgroundColor:'#ffa420'}}
+        contentContainerStyle={{
+                paddingBottom: insets.bottom + 80,
+        }}>
         <Text style={styles.start}>Aree</Text>
-        <ScrollView style={{backgroundColor:'#ffa420'}}>
         {areas?.map((area,index)=>
             <View style={authorizedAreas?.find((auth)=>auth==area.id) ? styles.boxAreaAuth : styles.boxAreaAuthNot} key={index}>
                 <Text style={styles.message}> {area.name} </Text>
                 <Text style={styles.textbutton}> Stato area: {getStatusString(area.status)}</Text>
-                <Text style ={styles.textbutton}> Numero di lavoratori : {area.workerIdsInArea.length}</Text>
+                <Text style ={styles.textbutton}> Numero di lavoratori : {area.userIdsInArea.length}</Text>
                  <View style={styles.radioContainer}>
                      <RadioButton
                          value={area.id}
@@ -298,7 +303,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor:'#ffa420'
+    backgroundColor:'#ffa420',
   },
   start:{
       fontSize: 30,
@@ -310,6 +315,7 @@ const styles = StyleSheet.create({
       marginLeft: 10,
   },
   boxAreaAuth: {
+      flex: 1,
       width: 340,
       marginTop: 10,
       marginBottom: 10,

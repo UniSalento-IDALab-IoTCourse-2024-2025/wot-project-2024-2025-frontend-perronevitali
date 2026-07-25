@@ -6,7 +6,8 @@ import Entypo from '@expo/vector-icons/Entypo';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Feather from '@expo/vector-icons/Feather';
-
+import EvilIcons from '@expo/vector-icons/EvilIcons';
+import AntDesign from '@expo/vector-icons/AntDesign';
 import { ComponentProps } from 'react';
 import { OpaqueColorValue, type StyleProp, type TextStyle } from 'react-native';
 
@@ -27,7 +28,10 @@ const MAPPING = {
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
   'person.fill': 'person',
-  'link': 'external-link'
+  'link': 'external-link',
+  'shippingbox': 'box',
+  'trash': 'trash',
+  'plus' : 'plus'
 } as IconMapping;
 
 /**

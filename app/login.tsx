@@ -120,7 +120,7 @@ export default function LoginScreen() {
                   router.push('/')
               }else if(loggedUser.role==="ADMIN"){
                   await AsyncStorage.setItem('userRole', 'admin')
-                  router.push('/adminTabs/adminHome')
+                  router.push('/')
               }else{
                   console.log("Role unknow")
              }
