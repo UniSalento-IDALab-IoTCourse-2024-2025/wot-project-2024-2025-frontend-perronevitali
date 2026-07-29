@@ -6,18 +6,32 @@ import { API_BASE_URL,API_PORT_OS,API_PORT_US } from '@/constants/api';
 import { useRouter } from 'expo-router';
 export default function ThresholdScreen(){
     const router = useRouter()
+    const [area,setArea] = useState(null)
+    const [temperature,setTemperature] = useState(0.0)
+    const [humidity,setHumidity] = useState(0.0)
+    const [danger,setDanger] = useState(0.0)
+    const getArea = async () =>{
+        const area = JSON.parse(await AsyncStorage.getItem("infoArea"))
+        setArea(area)
+        setTemperature(area.thresholdTemperature);
+        setHumidity(area.thresholdHumidity);
+        setDanger(area.dangerIndexThreshold);
+    }
+    useEffect(()=>{
+        getArea()
+    },[])
     const handleCancel = async () =>{
         router.replace("/")
     }
     return(
         <View style={styles.container}>
             <Text style={styles.start}>Modifica soglie</Text>
-            <Text style={styles.text}>  Soglia umidità</Text>
-            <TextInput  style={styles.input}/>
             <Text style={styles.text}>  Soglia temperatura</Text>
-            <TextInput  style={styles.input}/>
+            <TextInput  style={styles.input} keyboardType="decimal-pad" value={temperature.toString()} onChangeText={(text) => setTemperature(parseFloat(text) || 0)} />
+            <Text style={styles.text}>  Soglia umidità</Text>
+            <TextInput  style={styles.input} keyboardType="decimal-pad" value={humidity.toString()} onChangeText={(text) => setHumidity(parseFloat(text) || 0)} />
             <Text style={styles.text}>  Soglia pericolo</Text>
-            <TextInput  style={styles.input}/>
+            <TextInput  style={styles.input} keyboardType="decimal-pad" value={danger.toString()} onChangeText={(text) => setDanger(parseFloat(text) || 0)} />
             <View style={styles.buttonlist}>
                 <TouchableOpacity style={styles.buttonlog} onPress={handleCancel}>
                     <Text style={styles.textbutton}>Annulla</Text>

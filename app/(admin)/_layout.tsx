@@ -37,6 +37,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="tasks"
+        options={{
+        title: 'Task assignment',
+            tabBarIcon: ({ color }) => <FontAwesome5 name="clipboard-list" size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
       name="profile"
       options={{
         title: 'Profilo',

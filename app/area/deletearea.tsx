@@ -1,54 +1,45 @@
 import { useState,useEffect,useRef } from 'react';
-import { View,Platform,ScrollView, Text, StyleSheet, TouchableOpacity,Button,Modal } from 'react-native';
+import { View,Platform,ScrollView, Text, StyleSheet, TouchableOpacity,Button,Modal,TextInput } from 'react-native';
 import {Divider} from "react-native-elements";
-import { List } from 'react-native-paper';
-import { useRouter } from 'expo-router'
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL,API_PORT_OS,API_PORT_US } from '@/constants/api';
+import { useRouter } from 'expo-router';
 
-export default function ItemOptScreen(){
+
+export default function DeleteAreaScreen(){
+    const [areaToDel,setAreaToDel] = useState(null)
+    const getAreaToDel = async () =>{
+        const area =JSON.parse(await AsyncStorage.getItem("infoArea"))
+        console.log(area)
+        setAreaToDel(area)
+    }
+    useEffect(()=>{
+        getAreaToDel()
+    },[])
+    const handleCancel = async () =>{
+        router.replace("/")
+    }
     const router = useRouter()
-    const comeBackToHome = () =>{
-            router.push("/")
-    }
-    const goToAddItem = async (type) =>{
-        await AsyncStorage.setItem("typeItem",type)
-        router.replace("/item/newitem")
-    }
-    const goToUpdateStore = async () =>{
-        router.replace("/item/updatestore")
-    }
     return(
         <View style={styles.container}>
-                <Text style={styles.start}>Opzioni Item</Text>
-                <List.Section>
-                      <List.Item
-                        title="Aggiungi  item"
-                        style={styles.buttonSup}
-                        titleStyle={styles.modalText}
-                        right={() => <List.Icon icon="chevron-right" />}
-                        onPress={() => {goToAddItem("Item")}}
-                      />
-
-                      <List.Item
-                        title="Aggiungi Deposito"
-                        style={styles.buttonCenter}
-                        titleStyle={styles.modalText}
-                        right={() => <List.Icon icon="chevron-right" />}
-                        onPress={() => {goToAddItem("Deposito")}}
-                      />
-                      <List.Item
-                        title="Aggiorna un deposito"
-                        style={styles.buttonInf}
-                        titleStyle={styles.modalText}
-                        right={() => <List.Icon icon="chevron-right" />}
-                         onPress={() => {goToUpdateStore()}}
-                      />
-                </List.Section>
-                <TouchableOpacity style={styles.button} onPress={comeBackToHome}>
-                    <Text style={styles.textbutton}>Torna alla home</Text>
+            <Text style={styles.start}>Sei sicuro di voler eliminare la seguente area?</Text>
+            <View style={styles.boxMessage}>
+                <Text style={styles.textbutton}>Nome: <Text style={styles.infoText}>{areaToDel?.name}</Text></Text>
+                <Text style={styles.textbutton}>MAC del Beacon: <Text style={styles.infoText}>{areaToDel?.beaconMAC}</Text></Text>
+                <Text style={styles.textbutton}>IP Rasperry: <Text style={styles.infoText}>{areaToDel?.ipRaspberry}</Text></Text>
+                <Text style={styles.textbutton}>Soglia Temperatura: <Text style={styles.infoText}>{areaToDel?.thresholdTemperature} °C</Text></Text>
+                <Text style={styles.textbutton}>Soglia Umidità: <Text style={styles.infoText}>{areaToDel?.thresholdHumidity} %</Text></Text>
+                <Text style={styles.textbutton}>Soglia Pericolo: <Text style={styles.infoText}>{areaToDel?.dangerIndexThreshold}</Text></Text>
+            </View>
+            <View style={styles.buttonlist}>
+                <TouchableOpacity style={styles.buttonlog} onPress={handleCancel}>
+                    <Text style={styles.textbutton}>Annulla</Text>
                 </TouchableOpacity>
-       </View>
-
+                <TouchableOpacity style={styles.buttonConf}>
+                    <Text style={styles.textbutton}>Elimina</Text>
+                </TouchableOpacity>
+            </View>
+        </View>
     )
 
 }
@@ -58,6 +49,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor:'#ffa420'
+  },
+  boxMessage: {
+        width: 340,
+        //eight: 90,
+        marginTop: 30,
+        marginBottom: 30,
+        padding: 10,
+        backgroundColor: '#2c2e52',
+        borderRadius: 10,
+        //flexDirection: 'row',
+        //alignItems: 'center',
+        //justifyContent: 'space-between',
   },
   start:{
       fontSize: 30,
@@ -98,47 +101,33 @@ const styles = StyleSheet.create({
       color: 'white'
   },
   button:{
-      justifyContent: 'center',
-      alignItems:'center',
-      backgroundColor:'#ff4700',
-      height: 60,
-      width:200,
-      borderRadius:15
-  },
-  buttonCenter:{
     justifyContent: 'center',
     alignItems:'center',
-    backgroundColor:'gold',
+    backgroundColor:'#ff4700',
     height: 60,
-    width:300,
-    //borderRadius:15
-  },
-  buttonSup:{
-      justifyContent: 'center',
-      alignItems:'center',
-      backgroundColor:'gold',
-      height: 60,
-      width:300,
-      borderTopLeftRadius: 15,
-      borderTopRightRadius: 15,
-  },
-  buttonInf:{
-      justifyContent: 'center',
-      alignItems:'center',
-      backgroundColor:'gold',
-      height: 60,
-      width:300,
-      borderBottomLeftRadius: 15,
-      borderBottomRightRadius: 15,
+    width:200,
+    borderRadius:15
   },
   buttonlog:{
     justifyContent: 'center',
     alignItems:'center',
     backgroundColor:'red',
     height: 60,
-    width:200,
+    width:100,
+    marginLeft:15,
+    marginRight:15,
     borderRadius:15
   },
+  buttonConf:{
+      justifyContent: 'center',
+      alignItems:'center',
+      backgroundColor:'green',
+      height: 60,
+      width:100,
+      marginLeft:15,
+      marginRight:15,
+      borderRadius:15
+ },
   textContainer: {
       flex: 1,
   },
@@ -149,7 +138,7 @@ const styles = StyleSheet.create({
   },
 
   textbutton:{
-    fontSize:18,
+    fontSize:24,
     fontWeight: 'bold',
     color:'white'
   },
@@ -216,11 +205,11 @@ const styles = StyleSheet.create({
      },
      modalText:{
          fontSize: 24,
+         marginTop: 10,
          fontWeight: 'bold',
          color: 'white'
      },
     buttonlist:{
-        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
         flexDirection:'row',
@@ -233,8 +222,16 @@ const styles = StyleSheet.create({
     infoText:{
         fontSize: 24,
         fontWeight: 'bold',
-        alignItems: 'right',
-        alignSelf: 'right',
+       // alignItems: 'right',
+        //alignSelf: 'right',
         color: '#ffa420',
     },
+    addButton:{
+        width: 38,
+        height: 38,
+        borderRadius: 20,
+        backgroundColor: 'green',
+        justifyContent: 'center',
+        alignItems: 'center',
+    }
 });

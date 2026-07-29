@@ -289,7 +289,7 @@ export default function WorkerHome() {
                     <Divider style={{ backgroundColor: '#ccc', marginVertical: 10 }} />
                     <Text style={styles.modalText}>Beacon: <Text style={styles.infoText}>{selectedArea?.beaconMAC}</Text> </Text>
                     <Text style={styles.modalText}>Temperatura: <Text style={styles.infoText}>{selectedArea?.currentTemperature}</Text> </Text>
-                    <Text style={styles.modalText}>Umidità: <Text style={styles.infoText}>{selectedArea?.currentHumidity}</Text> </Text>
+                    <Text style={styles.modalText}>Umidità: <Text style={styles.infoText}>{selectedArea?.currentHumidity} %</Text> </Text>
                 </View>
             </View>
         </Modal>

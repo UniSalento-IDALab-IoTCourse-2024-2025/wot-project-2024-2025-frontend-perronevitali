@@ -5,48 +5,34 @@ import { List } from 'react-native-paper';
 import { useRouter } from 'expo-router'
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function ItemOptScreen(){
+export default function TaksList(){
     const router = useRouter()
-    const comeBackToHome = () =>{
-            router.push("/")
+    const goToCreateTak = async () =>{
+        router.replace("/activity/taskopt")
     }
-    const goToAddItem = async (type) =>{
-        await AsyncStorage.setItem("typeItem",type)
-        router.replace("/item/newitem")
-    }
-    const goToUpdateStore = async () =>{
-        router.replace("/item/updatestore")
+    const goToEvaluateTask = async () =>{
+        console.log("Valutazione delle task")
     }
     return(
         <View style={styles.container}>
-                <Text style={styles.start}>Opzioni Item</Text>
+                <Text style={styles.start}>Task</Text>
                 <List.Section>
                       <List.Item
-                        title="Aggiungi  item"
+                        title="Crea una nuova task"
                         style={styles.buttonSup}
                         titleStyle={styles.modalText}
                         right={() => <List.Icon icon="chevron-right" />}
-                        onPress={() => {goToAddItem("Item")}}
+                        onPress={() => {goToCreateTak()}}
                       />
 
                       <List.Item
-                        title="Aggiungi Deposito"
-                        style={styles.buttonCenter}
-                        titleStyle={styles.modalText}
-                        right={() => <List.Icon icon="chevron-right" />}
-                        onPress={() => {goToAddItem("Deposito")}}
-                      />
-                      <List.Item
-                        title="Aggiorna un deposito"
+                        title="Valuta una task"
                         style={styles.buttonInf}
                         titleStyle={styles.modalText}
                         right={() => <List.Icon icon="chevron-right" />}
-                         onPress={() => {goToUpdateStore()}}
+                        onPress={() => {goToEvaluateTask()}}
                       />
                 </List.Section>
-                <TouchableOpacity style={styles.button} onPress={comeBackToHome}>
-                    <Text style={styles.textbutton}>Torna alla home</Text>
-                </TouchableOpacity>
        </View>
 
     )

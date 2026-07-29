@@ -17,7 +17,11 @@ export default function AdminHome () {
     const [isModalVisible,setModalVisible] = useState(false)
     const [selectedArea,setSelectedArea] = useState(null)
     const getManagedAreas = async (user,token) =>{
-        const url = endpointUS+'/api/admins/'+user.id
+        let url = ""
+        if(user.email!=="admin@faro.it")
+            url = endpointUS+'/api/admins/'+user.id
+        else
+            url = endpointOS+'/api/areas/'
         try{
             const response = await fetch(url,{
                 method: 'GET',
@@ -31,14 +35,20 @@ export default function AdminHome () {
                 router.replace("/login")
             }else{
                 const data = await response.json()
-                const managedsID = [data.admins.adminsList[0].managedAreaId]
-                let managedAreas = []
-                for(let managedId in managedsID){
-                   const managedArea = await getArea(managedsID[managedId],token)
-                   managedAreas.push(managedArea)
+                if(user.email!=="admin@faro.it"){
+                    const managedsID = [data.admins.adminsList[0].managedAreaId]
+                    let managedAreas = []
+                    for(let managedId in managedsID){
+                        const managedArea = await getArea(managedsID[managedId],token)
+                        managedAreas.push(managedArea)
+                    }
+                    setManagedAreas(managedAreas)
+                    await AsyncStorage.setItem("manageAreas",JSON.stringify(managedAreas))
+                }else{
+                    const managedAreas = data.areas.areasList
+                    setManagedAreas(managedAreas)
+                    await AsyncStorage.setItem("manageAreas",JSON.stringify(managedAreas))
                 }
-                setManagedAreas(managedAreas)
-                await AsyncStorage.setItem("manageAreas",JSON.stringify(managedAreas))
             }
         }catch(e){
             console.log("Errore api/admins/idadmin",e)
@@ -118,8 +128,8 @@ export default function AdminHome () {
                         <Text style={styles.message}> {managed?.name} </Text>
                         <Text style={styles.textbutton}> Stato area: {getStatusString(managed?.status)}</Text>
                         <Text style ={styles.textbutton}> Numero di lavoratori : {managed?.userIdsInArea.length}</Text>
-                        <Text style ={styles.textbutton}> Temperatura attuale : {managed?.currentTemperature}°C </Text>
-                         <Text style ={styles.textbutton}> Umidità attuale : {managed?.currentHumidity} °C {"\n"}</Text>
+                        <Text style ={styles.textbutton}> Temperatura attuale : {managed?.currentTemperature} °C </Text>
+                         <Text style ={styles.textbutton}> Umidità attuale : {managed?.currentHumidity} % {"\n"}</Text>
                         <View style={styles.buttonlist}>
                             <View style={{ marginHorizontal: 20 }}>
                                 <Button title="Informazioni Area" color="#ffa420" onPress={()=>{openModal(managed)}} />
@@ -146,7 +156,7 @@ export default function AdminHome () {
                             <Text style={styles.modalText}>Beacon: <Text style={styles.infoText}>{selectedArea?.beaconMAC}</Text> </Text>
                             <Text style={styles.modalText}>Indirizzo IP: <Text style={styles.infoText}>{selectedArea?.ipRaspberry}</Text> </Text>
                             <Text style={styles.modalText}>Soglia Temperatura: <Text style={styles.infoText}>{selectedArea?.thresholdTemperature} °C</Text> </Text>
-                            <Text style={styles.modalText}>Soglia Umidità : <Text style={styles.infoText}>{selectedArea?.thresholdHumidity} °C</Text> </Text>
+                            <Text style={styles.modalText}>Soglia Umidità : <Text style={styles.infoText}>{selectedArea?.thresholdHumidity} %</Text> </Text>
                         </View>
                     </View>
                 </Modal>

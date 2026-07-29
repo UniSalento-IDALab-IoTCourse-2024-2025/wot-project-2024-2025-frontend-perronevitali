@@ -5,43 +5,50 @@ import { List } from 'react-native-paper';
 import { useRouter } from 'expo-router'
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function ItemOptScreen(){
+export default function TaskOptionsMenu(){
     const router = useRouter()
     const comeBackToHome = () =>{
-            router.push("/")
-    }
-    const goToAddItem = async (type) =>{
-        await AsyncStorage.setItem("typeItem",type)
-        router.replace("/item/newitem")
-    }
-    const goToUpdateStore = async () =>{
-        router.replace("/item/updatestore")
+        router.replace("/")
     }
     return(
         <View style={styles.container}>
-                <Text style={styles.start}>Opzioni Item</Text>
+                <Text style={styles.start}>Scegli il tipo di Task</Text>
                 <List.Section>
                       <List.Item
-                        title="Aggiungi  item"
+                        title="Carico"
                         style={styles.buttonSup}
                         titleStyle={styles.modalText}
                         right={() => <List.Icon icon="chevron-right" />}
-                        onPress={() => {goToAddItem("Item")}}
+                        onPress={() => {console.log("Carico")}}
                       />
 
                       <List.Item
-                        title="Aggiungi Deposito"
+                        title="Scarico"
                         style={styles.buttonCenter}
                         titleStyle={styles.modalText}
                         right={() => <List.Icon icon="chevron-right" />}
-                        onPress={() => {goToAddItem("Deposito")}}
+                        onPress={() => {console.log("Scarico")}}
                       />
                       <List.Item
-                        title="Aggiorna un deposito"
+                        title="Spostamento"
+                        style={styles.buttonCenter}
+                        titleStyle={styles.modalText}
+                        right={() => <List.Icon icon="chevron-right" />}
+                        onPress={() => {console.log("Spostamento")}}
+                      />
+                      <List.Item
+                        title="Ispezione"
+                        style={styles.buttonCenter}
+                        titleStyle={styles.modalText}
+                        right={() => <List.Icon icon="chevron-right" />}
+                        onPress={() => {console.log("Ispezione")}}
+                      />
+                      <List.Item
+                        title="Manutenzione"
                         style={styles.buttonInf}
                         titleStyle={styles.modalText}
                         right={() => <List.Icon icon="chevron-right" />}
-                         onPress={() => {goToUpdateStore()}}
+                        onPress={() => {console.log("Manutenzione")}}
                       />
                 </List.Section>
                 <TouchableOpacity style={styles.button} onPress={comeBackToHome}>

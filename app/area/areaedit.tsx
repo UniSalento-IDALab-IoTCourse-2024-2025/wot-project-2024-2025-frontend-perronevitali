@@ -6,6 +6,36 @@ import { API_BASE_URL,API_PORT_OS,API_PORT_US } from '@/constants/api';
 import { useRouter } from 'expo-router';
 export default function EditArea(){
     const router = useRouter()
+    const [name,setName] = useState("")
+    const [mac1,setMac1] = useState("")
+    const [mac2,setMac2] = useState("")
+    const [mac3,setMac3] = useState("")
+    const [mac4,setMac4] = useState("")
+    const [mac5,setMac5] = useState("")
+    const [mac6,setMac6] = useState("")
+    const [ip1,setIp1] = useState(0)
+    const [ip2,setIp2] = useState(0)
+    const [ip3,setIp3] = useState(0)
+    const [ip4,setIp4] = useState(0)
+    const getArea = async () => {
+        const area = JSON.parse(await AsyncStorage.getItem("infoArea"))
+        const mac = area.beaconMAC
+        setName(area.name)
+        setMac1(mac.split(":")[0])
+        setMac2(mac.split(":")[1])
+        setMac3(mac.split(":")[2])
+        setMac4(mac.split(":")[3])
+        setMac5(mac.split(":")[4])
+        setMac6(mac.split(":")[5])
+        const ip = area.ipRaspberry
+        setIp1(ip.split(".")[0])
+        setIp2(ip.split(".")[1])
+        setIp3(ip.split(".")[2])
+        setIp4(ip.split(".")[3])
+    }
+    useEffect(()=>{
+        getArea()
+    },[])
     const comeToOption= async ()=>{
         router.push("/area/areaopt")
     }
@@ -13,45 +43,49 @@ export default function EditArea(){
         <View style={styles.container}>
             <Text style={styles.start}>Modifica area </Text>
              <Text style={styles.text}>  Nome</Text>
-             <TextInput  style={styles.input}/>
+             <TextInput  style={styles.input} value={name} onChangeText={setName}/>
              <Text style={styles.text}> MAC del Beacon</Text>
              <View style={styles.macContainer}>
                 <View style={styles.macPart}>
-                    <TextInput style={styles.inputMAC} maxLength={2}/>
+                    <TextInput style={styles.inputMAC} maxLength={2} value={mac1} onChangeText={setMac1}/>
                     <Text style={styles.separator}>:</Text>
                 </View>
                 <View style={styles.macPart}>
-                    <TextInput style={styles.inputMAC} maxLength={2}/>
+                    <TextInput style={styles.inputMAC} maxLength={2} value={mac2} onChangeText={setMac2}/>
                     <Text style={styles.separator}>:</Text>
                 </View>
                 <View style={styles.macPart}>
-                    <TextInput style={styles.inputMAC} maxLength={2}/>
+                    <TextInput style={styles.inputMAC} maxLength={2} value={mac3} onChangeText={setMac3}/>
                     <Text style={styles.separator}>:</Text>
                 </View>
                 <View style={styles.macPart}>
-                    <TextInput style={styles.inputMAC} maxLength={2}/>
+                    <TextInput style={styles.inputMAC} maxLength={2} value={mac4} onChangeText={setMac4}/>
                     <Text style={styles.separator}>:</Text>
                 </View>
                 <View style={styles.macPart}>
-                    <TextInput style={styles.inputMAC} maxLength={2}/>
+                    <TextInput style={styles.inputMAC} maxLength={2} value={mac5} onChangeText={setMac5}/>
+                    <Text style={styles.separator}>:</Text>
+                </View>
+                <View style={styles.macPart}>
+                    <TextInput style={styles.inputMAC} maxLength={2} value={mac6} onChangeText={setMac6}/>
                 </View>
              </View>
              <Text style={styles.text}> Indirizzo IP</Text>
              <View style={styles.macContainer}>
                 <View style={styles.macPart}>
-                    <TextInput style={styles.inputIP}maxLength={3}/>
+                    <TextInput style={styles.inputIP}maxLength={3} keyboardType="number-pad" value={ip1} onChangeText={setIp1}/>
                     <Text style={styles.separator}>.</Text>
                 </View>
                 <View style={styles.macPart}>
-                    <TextInput style={styles.inputIP}maxLength={3}/>
+                    <TextInput style={styles.inputIP}maxLength={3} keyboardType="number-pad" value={ip2} onChangeText={setIp2}/>
                     <Text style={styles.separator}>.</Text>
                 </View>
                 <View style={styles.macPart}>
-                    <TextInput style={styles.inputIP}maxLength={3}/>
+                    <TextInput style={styles.inputIP}maxLength={3} keyboardType="number-pad" value={ip3} onChangeText={setIp3}/>
                     <Text style={styles.separator}>.</Text>
                 </View>
                 <View style={styles.macPart}>
-                    <TextInput style={styles.inputIP}maxLength={3}/>
+                    <TextInput style={styles.inputIP}maxLength={3} keyboardType="number-pad" value={ip4} onChangeText={setIp4}/>
                 </View>
              </View>
              <View style={styles.buttonlist}>
@@ -178,7 +212,7 @@ const styles = StyleSheet.create({
     alignSelf:'left'
   },
   inputMAC: {
-      width: 35,
+      width: 30,
       height: 40,
       margin: 9,
       borderWidth: 1,

@@ -79,6 +79,28 @@ export default function InventoryScreen(){
     useEffect(()=>{
         getInventoryAreas()
     },[])
+    const deleteItem = async (id) =>{
+        const url = endpointOS +'/api/items/'+id
+        const token = await AsyncStorage.getItem("token")
+        try{
+            const response = await fetch(url,{
+                        method: 'DELETE',
+                        headers:{
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer '+token
+                        }
+            })
+            if(!response.ok){
+                console.log("Errore",response.status)
+            }else{
+                alert("Eliminazione eseguita con successo!")
+                getInventoryAreas()
+            }
+
+        }catch(e){
+            console.log("Errroe DELETE /api/items/id:",e)
+        }
+    }
     return(
         <View style={styles.container}>
         <ScrollView style={{backgroundColor:'#ffa420'}}>
@@ -100,7 +122,7 @@ export default function InventoryScreen(){
                             <Text style={styles.message}>Sostanza: <Text style={styles.infoText}>{store.substanceName}</Text></Text>
                             <Text style={styles.message}>Quantità: <Text style={styles.infoText}> {store.quantity} {store.unit} </Text></Text>
                         </View>
-                        <TouchableOpacity style={styles.boxAreaAuthNot}>
+                        <TouchableOpacity style={styles.boxAreaAuthNot} onPress={()=>{deleteItem(store.id)}}>
                             <EvilIcons name="trash" size={32} color="white" />
                         </TouchableOpacity>
                     </View>

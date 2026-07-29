@@ -1,13 +1,48 @@
 import { useState,useEffect,useRef } from 'react';
-import { View,Platform,ScrollView, Text, StyleSheet, TouchableOpacity,Button,Modal } from 'react-native';
+import { View,Platform,ScrollView, Text, TextInput, StyleSheet, TouchableOpacity,Button,Modal } from 'react-native';
 import {Divider} from "react-native-elements";
+import {SelectList} from 'react-native-dropdown-select-list';
+import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function NewArea(){
+export default function NewItemScreen(){
+    const [type,setType] = useState(null)
+    const router = useRouter()
+    const substances = ["sub1","sub2","sub3"]
+    const [selected,setSelected] = useState(null)
+
+    const getItem = async () =>{
+        const typeItem = await AsyncStorage.getItem("typeItem")
+        setType(typeItem)
+    }
+    useEffect(()=>{
+        getItem()
+    },[])
+    const handleCancel = async () =>{
+        router.push("/")
+    }
     return(
         <View style={styles.container}>
-            <Text style={styles.start}>Nuovo item </Text>
+            <Text style={styles.start}>Nuovo {type} </Text>
+            <View>
+                <Text style={styles.text}>  Nome</Text>
+                <TextInput  style={styles.input} />
+                <Text style={styles.text}>  Sostanza</Text>
+                <SelectList data={substances} style={{width:500, height:500, marginVertical:10}} boxStyles={{backgroundColor:'white'}} placeholder="Seleziona una sostanza" value={selected} setSelected={setSelected} save='key'/>
+                <Text style={styles.text}>  Quantità</Text>
+                <TextInput style={styles.input}  />
+                <Text style={styles.text}>  Unità di misura</Text>
+                <TextInput style={styles.input}  />
+                <View style={styles.buttonlist}>
+                    <TouchableOpacity style={styles.buttonlog} onPress={handleCancel}>
+                        <Text style={styles.textbutton}>Annulla</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.buttonCreate}>
+                        <Text style={styles.textbutton}>Crea nuovo {type} </Text>
+                    </TouchableOpacity>
+                </View>
+           </View>
         </View>
-
     )
 
 }
@@ -51,6 +86,11 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         position: 'relative'
     },
+    text:{
+            fontSize: 18,
+            fontWeight: 'bold',
+            color: 'white',
+     },
   message:{
       fontSize: 24,
       fontWeight: 'bold',
@@ -69,8 +109,21 @@ const styles = StyleSheet.create({
     alignItems:'center',
     backgroundColor:'red',
     height: 60,
-    width:200,
+    width:100,
+    marginRight:10,
     borderRadius:15
+  },
+  buttonCreate:{
+      justifyContent: 'center',
+      alignItems:'center',
+      backgroundColor:'green',
+      height: 60,
+      width: 165,
+      marginTop:10,
+      marginBottom:10,
+      marginLeft:10,
+      marginRight:10,
+      borderRadius:15
   },
   textContainer: {
       flex: 1,
@@ -154,7 +207,6 @@ const styles = StyleSheet.create({
          color: 'white'
      },
     buttonlist:{
-        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
         flexDirection:'row',

@@ -1,53 +1,42 @@
 import { useState,useEffect,useRef } from 'react';
-import { View,Platform,ScrollView, Text, StyleSheet, TouchableOpacity,Button,Modal } from 'react-native';
+import { View,Platform,ScrollView, Text, TextInput, StyleSheet, TouchableOpacity,Button,Modal } from 'react-native';
 import {Divider} from "react-native-elements";
-import { List } from 'react-native-paper';
-import { useRouter } from 'expo-router'
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import {SelectList} from 'react-native-dropdown-select-list';
+import { useRouter } from 'expo-router';
 
-export default function ItemOptScreen(){
+export default function UpdateStoreScreen(){
     const router = useRouter()
-    const comeBackToHome = () =>{
-            router.push("/")
-    }
-    const goToAddItem = async (type) =>{
-        await AsyncStorage.setItem("typeItem",type)
-        router.replace("/item/newitem")
-    }
-    const goToUpdateStore = async () =>{
-        router.replace("/item/updatestore")
+    const [selectedStore,setSelectedStore] = useState('')
+    const [selectedSub,setSelectedSub] = useState('')
+    const stores = ["store 1","store 2","store, 3"]
+    const substances = ["sub 1","sub 2","sub 3"]
+    const handleCancel = async () =>{
+        router.replace("/")
     }
     return(
         <View style={styles.container}>
-                <Text style={styles.start}>Opzioni Item</Text>
-                <List.Section>
-                      <List.Item
-                        title="Aggiungi  item"
-                        style={styles.buttonSup}
-                        titleStyle={styles.modalText}
-                        right={() => <List.Icon icon="chevron-right" />}
-                        onPress={() => {goToAddItem("Item")}}
-                      />
-
-                      <List.Item
-                        title="Aggiungi Deposito"
-                        style={styles.buttonCenter}
-                        titleStyle={styles.modalText}
-                        right={() => <List.Icon icon="chevron-right" />}
-                        onPress={() => {goToAddItem("Deposito")}}
-                      />
-                      <List.Item
-                        title="Aggiorna un deposito"
-                        style={styles.buttonInf}
-                        titleStyle={styles.modalText}
-                        right={() => <List.Icon icon="chevron-right" />}
-                         onPress={() => {goToUpdateStore()}}
-                      />
-                </List.Section>
-                <TouchableOpacity style={styles.button} onPress={comeBackToHome}>
-                    <Text style={styles.textbutton}>Torna alla home</Text>
-                </TouchableOpacity>
-       </View>
+            <Text style={styles.start}>Aggiorna deposito </Text>
+            <View>
+                <Text style={styles.text}>{"\n"}Deposito {"\n"}</Text>
+                <SelectList data={stores} style={{width:500, height:500, marginVertical:10,}} boxStyles={{backgroundColor:'white'}} placeholder="Seleziona un deposito" value={selectedStore} setSelected={setSelectedStore} save='key'/>
+                <Text style={styles.text}>{"\n"}Sostanza {"\n"}</Text>
+                <SelectList data={substances} style={{width:500, height:500, marginVertical:10,}} boxStyles={{backgroundColor:'white'}} placeholder="Seleziona una sostanza" value={selectedSub} setSelected={setSelectedSub} save='key'/>
+                <Text style={styles.text}>{"\n"}  Quantità iniziale:</Text>
+                <TextInput style={styles.input} editable={false}  />
+                <Text style={styles.text}>  Unità di misura</Text>
+                <TextInput style={styles.input} editable={false}  />
+                <Text style={styles.text}>{"\n"}  Quantità finale:</Text>
+                <TextInput style={styles.input}  />
+                <View style={styles.buttonlist}>
+                    <TouchableOpacity style={styles.buttonlog} onPress={handleCancel} >
+                        <Text style={styles.textbutton}>Annulla</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.buttonCreate}>
+                        <Text style={styles.textbutton}>Aggiorna </Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        </View>
 
     )
 
@@ -67,6 +56,12 @@ const styles = StyleSheet.create({
       color: 'white',
       marginTop:50,
       marginLeft: 10,
+  },
+  text: {
+     fontSize: 20,
+     fontWeight: 'bold',
+     alignSelf: 'flex-start',
+     color: 'white',
   },
   boxAreaAuth: {
       width: 340,
@@ -98,46 +93,32 @@ const styles = StyleSheet.create({
       color: 'white'
   },
   button:{
-      justifyContent: 'center',
-      alignItems:'center',
-      backgroundColor:'#ff4700',
-      height: 60,
-      width:200,
-      borderRadius:15
-  },
-  buttonCenter:{
     justifyContent: 'center',
     alignItems:'center',
-    backgroundColor:'gold',
+    backgroundColor:'#ff4700',
     height: 60,
-    width:300,
-    //borderRadius:15
-  },
-  buttonSup:{
-      justifyContent: 'center',
-      alignItems:'center',
-      backgroundColor:'gold',
-      height: 60,
-      width:300,
-      borderTopLeftRadius: 15,
-      borderTopRightRadius: 15,
-  },
-  buttonInf:{
-      justifyContent: 'center',
-      alignItems:'center',
-      backgroundColor:'gold',
-      height: 60,
-      width:300,
-      borderBottomLeftRadius: 15,
-      borderBottomRightRadius: 15,
+    width:200,
+    borderRadius:15
   },
   buttonlog:{
     justifyContent: 'center',
     alignItems:'center',
     backgroundColor:'red',
     height: 60,
-    width:200,
-    borderRadius:15
+    width:100,
+    borderRadius:15,
+    marginLeft: 10,
+    marginRight: 10,
+  },
+  buttonCreate:{
+      justifyContent: 'center',
+      alignItems:'center',
+      backgroundColor:'green',
+      height: 60,
+      width:100,
+      borderRadius:15,
+      marginLeft: 10,
+      marginRight: 10,
   },
   textContainer: {
       flex: 1,
@@ -216,14 +197,15 @@ const styles = StyleSheet.create({
      },
      modalText:{
          fontSize: 24,
+         marginTop: 10,
          fontWeight: 'bold',
          color: 'white'
      },
     buttonlist:{
-        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
         flexDirection:'row',
+        marginTop: 20
     },
     radioContainer: {
         position: 'absolute',

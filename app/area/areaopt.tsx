@@ -23,6 +23,12 @@ export default function AreaOptionScreen(){
     const goToThreshold = async () =>{
         router.replace('/area/thresholdarea')
     }
+    const goToListUser = async () =>{
+        router.replace('/area/listUser')
+    }
+    const goToDelArea = async () =>{
+        router.replace('/area/deletearea')
+    }
     return(
       <View style={styles.container}>
         <Text style={styles.start}>Opzioni Area</Text>
@@ -56,7 +62,7 @@ export default function AreaOptionScreen(){
                 style={styles.buttonCenter}
                 titleStyle={styles.modalText}
                 right={() => <List.Icon icon="chevron-right" />}
-                onPress={() => console.log("Opzione 4")}
+                onPress={() => {goToListUser()}}
               />
 
               <List.Item
@@ -64,7 +70,7 @@ export default function AreaOptionScreen(){
                 style={styles.buttonInf}
                 titleStyle={styles.modalText}
                 right={() => <List.Icon icon="chevron-right" />}
-                onPress={() => console.log("Opzione 5")}
+                onPress={() => {goToDelArea()}}
               />
         </List.Section>
         <TouchableOpacity style={styles.button} onPress={comeBackToHome}>
@@ -130,7 +136,7 @@ const styles = StyleSheet.create({
   buttonCenter:{
     justifyContent: 'center',
     alignItems:'center',
-    backgroundColor:'#ff4700',
+    backgroundColor:'gold',
     height: 60,
     width:300,
     //borderRadius:15
@@ -138,7 +144,7 @@ const styles = StyleSheet.create({
   buttonSup:{
       justifyContent: 'center',
       alignItems:'center',
-      backgroundColor:'#ff4700',
+      backgroundColor:'gold',
       height: 60,
       width:300,
       borderTopLeftRadius: 15,

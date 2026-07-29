@@ -23,13 +23,16 @@ export default function ProfileScreen() {
     },[])
 
 
-      const logout = async() =>{
+    const logout = async() =>{
           try{
               router.push('login')
           }catch(error){
               console.log('Si è verificato un errore durante la cancellazione del token: ',error)
           }
       }
+    const goToCreateAdmin = async () =>{
+        router.push('user/newAdmin')
+    }
 
 
     return (
@@ -42,6 +45,16 @@ export default function ProfileScreen() {
                     <TextInput style={styles.input}  editable={false} value={surname}/>
                     <Text style={styles.text}>  Email</Text>
                     <TextInput style={styles.input} editable={false} value={email}/>
+                </View>
+                <View>
+                    <TouchableOpacity onPress={goToCreateAdmin} style={styles.buttonCreate}>
+                        <Text style={styles.textbutton}>Aggiungi un nuovo amministratore</Text>
+                    </TouchableOpacity>
+                </View>
+                <View>
+                    <TouchableOpacity style={styles.buttonCreate}>
+                        <Text style={styles.textbutton}>Aggiungi un nuovo lavoratore</Text>
+                    </TouchableOpacity>
                 </View>
                 <View>
                     <TouchableOpacity onPress={logout} style={styles.buttonlog}>
@@ -76,9 +89,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems:'center',
     backgroundColor:'#ff4700',
+    marginTop:10,
+    marginBottom:10,
     height: 60,
     width:200,
     borderRadius:15
+  },
+  buttonCreate:{
+        justifyContent: 'center',
+        alignItems:'center',
+        backgroundColor:'green',
+        height: 60,
+        width:270,
+        marginTop:10,
+        marginBottom:10,
+        borderRadius:15
   },
   buttonlog:{
     justifyContent: 'center',
