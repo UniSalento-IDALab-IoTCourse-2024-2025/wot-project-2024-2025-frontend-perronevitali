@@ -63,11 +63,13 @@ export default function InventoryScreen(){
     }, [selected]);
     const getInventoryAreas = async () =>{
         const managedAreas = JSON.parse(await AsyncStorage.getItem("manageAreas"))
+        console.log(JSON.stringify(managedAreas,'',2))
         let areaNames = []
         setManagedAreas(managedAreas)
         areaNames.push(FIRST_ELEMENT)
         for( let managedArea in managedAreas){
             const areaName =managedAreas[managedArea].name
+            console.log(areaName)
             areaNames.push(areaName)
         }
         setNameAreas(areaNames)

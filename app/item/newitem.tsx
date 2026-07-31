@@ -7,6 +7,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function NewItemScreen(){
     const [type,setType] = useState(null)
+    const [nome,setNome] = useState("")
+    const [quantity,setQuantity] = useState("")
+    const [unit,setUnit] = useState("")
     const router = useRouter()
     const substances = ["sub1","sub2","sub3"]
     const [selected,setSelected] = useState(null)
@@ -20,6 +23,10 @@ export default function NewItemScreen(){
     },[])
     const handleCancel = async () =>{
         router.push("/")
+    }
+    const addItem = async () =>{
+        if((nome===null || nome==="") || (selected===null || selected==="") || (quantity===null || quantity==="") || (unit===null || unit===""))
+            alert("Per favore inserisci tutti i campi!")
     }
     return(
         <View style={styles.container}>

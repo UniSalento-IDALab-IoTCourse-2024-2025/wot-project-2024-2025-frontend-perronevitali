@@ -24,7 +24,7 @@ export default function AreaOptionScreen(){
         router.replace('/area/thresholdarea')
     }
     const goToListUser = async () =>{
-        router.replace('/area/listUser')
+        router.replace('/user/listUser')
     }
     const goToDelArea = async () =>{
         router.replace('/area/deletearea')

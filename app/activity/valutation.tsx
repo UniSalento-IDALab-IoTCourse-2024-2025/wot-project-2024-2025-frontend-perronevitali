@@ -1,23 +1,26 @@
 import { useState,useEffect,useRef } from 'react';
-import { View,Platform,ScrollView, Text, StyleSheet, TouchableOpacity,Button,Modal,TextInput } from 'react-native';
+import { Platform, Text, StyleSheet, TouchableOpacity,ScrollView,View,Modal } from 'react-native';
 import {Divider} from "react-native-elements";
+import Feather from '@expo/vector-icons/Feather';
+import {useStomp} from '@/hooks/use-stomp';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL,API_PORT_OS,API_PORT_US } from '@/constants/api';
+import { RadioButton } from 'react-native-paper';
 import { useRouter } from 'expo-router';
-export default function ListUserArea(){
+import { API_BASE_URL,API_PORT_OS,API_PORT_US } from '@/constants/api';
+
+export default function EvaluateScreen(){
     return(
         <View style={styles.container}>
-            <Text style={styles.start}>List User </Text>
+            <Text style={styles.start}>Valuta task </Text>
         </View>
     )
-
 }
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor:'#ffa420'
+    backgroundColor:'#ffa420',
   },
   start:{
       fontSize: 30,
@@ -29,6 +32,7 @@ const styles = StyleSheet.create({
       marginLeft: 10,
   },
   boxAreaAuth: {
+      flex: 1,
       width: 340,
       marginTop: 10,
       marginBottom: 10,
@@ -53,7 +57,7 @@ const styles = StyleSheet.create({
         position: 'relative'
     },
   message:{
-      fontSize: 24,
+      fontSize: 18,
       fontWeight: 'bold',
       color: 'white'
   },
@@ -70,8 +74,18 @@ const styles = StyleSheet.create({
     alignItems:'center',
     backgroundColor:'red',
     height: 60,
-    width:200,
+    width:140,
+    marginRight:10,
     borderRadius:15
+  },
+  buttonCreate:{
+      justifyContent: 'center',
+      alignItems:'center',
+      backgroundColor:'green',
+      height: 60,
+      width:140,
+      marginLeft:10,
+      borderRadius:15
   },
   textContainer: {
       flex: 1,
@@ -155,7 +169,6 @@ const styles = StyleSheet.create({
          color: 'white'
      },
     buttonlist:{
-        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
         flexDirection:'row',
@@ -166,18 +179,25 @@ const styles = StyleSheet.create({
         right: 10,
     },
     infoText:{
-        fontSize: 24,
+        fontSize: 20,
         fontWeight: 'bold',
         alignItems: 'right',
         alignSelf: 'right',
         color: '#ffa420',
     },
-    addButton:{
-        width: 38,
-        height: 38,
-        borderRadius: 20,
-        backgroundColor: 'green',
-        justifyContent: 'center',
-        alignItems: 'center',
-    }
+    boxMessage: {
+          width: 340,
+          marginTop: 10,
+          marginBottom: 10,
+          alignSelf: "center",
+          padding: 10,
+          backgroundColor: '#2c2e52',
+          borderRadius: 10,
+      },
+      message:{
+          fontSize: 20,
+          fontWeight: 'bold',
+          color: 'white'
+      },
 });
+

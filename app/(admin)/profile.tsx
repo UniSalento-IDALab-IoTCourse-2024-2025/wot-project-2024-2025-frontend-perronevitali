@@ -33,6 +33,9 @@ export default function ProfileScreen() {
     const goToCreateAdmin = async () =>{
         router.push('user/newAdmin')
     }
+     const goToCreateWorker = async () =>{
+            router.push('user/newWorker')
+     }
 
 
     return (
@@ -52,7 +55,7 @@ export default function ProfileScreen() {
                     </TouchableOpacity>
                 </View>
                 <View>
-                    <TouchableOpacity style={styles.buttonCreate}>
+                    <TouchableOpacity onPress={goToCreateWorker} style={styles.buttonCreate}>
                         <Text style={styles.textbutton}>Aggiungi un nuovo lavoratore</Text>
                     </TouchableOpacity>
                 </View>

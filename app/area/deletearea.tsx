@@ -8,9 +8,9 @@ import { useRouter } from 'expo-router';
 
 export default function DeleteAreaScreen(){
     const [areaToDel,setAreaToDel] = useState(null)
+    const endpoint = API_BASE_URL+API_PORT_OS
     const getAreaToDel = async () =>{
         const area =JSON.parse(await AsyncStorage.getItem("infoArea"))
-        console.log(area)
         setAreaToDel(area)
     }
     useEffect(()=>{
@@ -18,6 +18,37 @@ export default function DeleteAreaScreen(){
     },[])
     const handleCancel = async () =>{
         router.replace("/")
+    }
+    const handleDelete = async () =>{
+        const url = endpoint+'/api/areas/'+areaToDel.id
+        const token = await AsyncStorage.getItem("token")
+        try{
+            const response = await fetch(url,{
+                method: 'DELETE',
+                headers:{
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+token
+                }
+            })
+            if(!response.ok){
+                console.log("errore chiamata api",response.status)
+                const data = await response.json()
+                const result = data.result
+                if(result===3){
+                    alert("Ci sono delle task in esecuzione!")
+                }
+            }else{
+                const data = await response.json();
+                const result = data.result
+                console.log(JSON.stringify(data,'',2))
+                if(result===0){
+                    alert("Area eliminata con successo!")
+                    router.push("/")
+                }
+            }
+        }catch(e){
+            console.log("Errore chamata API DELETE: /api/areas/",e)
+        }
     }
     const router = useRouter()
     return(
@@ -35,7 +66,7 @@ export default function DeleteAreaScreen(){
                 <TouchableOpacity style={styles.buttonlog} onPress={handleCancel}>
                     <Text style={styles.textbutton}>Annulla</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.buttonConf}>
+                <TouchableOpacity style={styles.buttonConf} onPress={handleDelete}>
                     <Text style={styles.textbutton}>Elimina</Text>
                 </TouchableOpacity>
             </View>
@@ -113,7 +144,7 @@ const styles = StyleSheet.create({
     alignItems:'center',
     backgroundColor:'red',
     height: 60,
-    width:100,
+    width:125,
     marginLeft:15,
     marginRight:15,
     borderRadius:15
@@ -123,7 +154,7 @@ const styles = StyleSheet.create({
       alignItems:'center',
       backgroundColor:'green',
       height: 60,
-      width:100,
+      width:125,
       marginLeft:15,
       marginRight:15,
       borderRadius:15

@@ -11,7 +11,7 @@ export default function TaksList(){
         router.replace("/activity/taskopt")
     }
     const goToEvaluateTask = async () =>{
-        console.log("Valutazione delle task")
+        router.replace("/activity/valutation")
     }
     return(
         <View style={styles.container}>

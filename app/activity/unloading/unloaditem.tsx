@@ -1,65 +1,54 @@
 import { useState,useEffect,useRef } from 'react';
-import { View,Platform,ScrollView, Text, StyleSheet, TouchableOpacity,Button,Modal } from 'react-native';
+import { View,Platform,ScrollView, Text, TextInput, StyleSheet, TouchableOpacity,Button,Modal } from 'react-native';
 import {Divider} from "react-native-elements";
-import { List } from 'react-native-paper';
-import { useRouter } from 'expo-router'
+import {SelectList} from 'react-native-dropdown-select-list';
+import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function TaskOptionsMenu(){
+export default function UnloadItemScreen(){
+    const [type,setType] = useState(null)
+    const data = ["area1","area2","area3"]
     const router = useRouter()
-    const comeBackToHome = () =>{
-        router.replace("/")
+    const substances = ["sub1","sub2","sub3"]
+    const [selected,setSelected] = useState(null)
+
+    const getItem = async () =>{
+        const typeItem = await AsyncStorage.getItem("typeItem")
+        setType(typeItem)
     }
-    const goToLoad = async(typeload) =>{
-        await AsyncStorage.setItem("typeload",typeload)
-        router.replace("/activity/externopt")
+    useEffect(()=>{
+        getItem()
+    },[])
+    const handleCancel = async () =>{
+        router.push("/")
+    }
+    const handleProceed = async () =>{
+        router.replace("/user/listWorker")
     }
     return(
         <View style={styles.container}>
-                <Text style={styles.start}>Scegli il tipo di Task</Text>
-                <List.Section>
-                      <List.Item
-                        title="Carico"
-                        style={styles.buttonSup}
-                        titleStyle={styles.modalText}
-                        right={() => <List.Icon icon="chevron-right" />}
-                        onPress={() => {goToLoad("load")}}
-                      />
-
-                      <List.Item
-                        title="Scarico"
-                        style={styles.buttonCenter}
-                        titleStyle={styles.modalText}
-                        right={() => <List.Icon icon="chevron-right" />}
-                        onPress={() => {goToLoad("unload")}}
-                      />
-                      <List.Item
-                        title="Spostamento"
-                        style={styles.buttonCenter}
-                        titleStyle={styles.modalText}
-                        right={() => <List.Icon icon="chevron-right" />}
-                        onPress={() => {router.replace("/activity/shift")}}
-                      />
-                      <List.Item
-                        title="Ispezione"
-                        style={styles.buttonCenter}
-                        titleStyle={styles.modalText}
-                        right={() => <List.Icon icon="chevron-right" />}
-                        onPress={() => {router.replace("/activity/inspection")}}
-                      />
-                      <List.Item
-                        title="Manutenzione"
-                        style={styles.buttonInf}
-                        titleStyle={styles.modalText}
-                        right={() => <List.Icon icon="chevron-right" />}
-                        onPress={() => {router.replace("/activity/maintenance")}}
-                      />
-                </List.Section>
-                <TouchableOpacity style={styles.button} onPress={comeBackToHome}>
-                    <Text style={styles.textbutton}>Torna alla home</Text>
-                </TouchableOpacity>
-       </View>
-
+            <Text style={styles.start}>Scarica Item </Text>
+            <View>
+                <Text style={styles.text}>  Nome</Text>
+                <TextInput  style={styles.input} />
+                <Text style={styles.text}>  Sostanza</Text>
+                <SelectList data={substances} style={{width:500, height:500, marginVertical:10}} boxStyles={{backgroundColor:'white'}} placeholder="Seleziona una sostanza" value={selected} setSelected={setSelected} save='key'/>
+                <Text style={styles.text}>  Quantità</Text>
+                <TextInput style={styles.input}  />
+                <Text style={styles.text}>  Unità di misura</Text>
+                <TextInput style={styles.input}  />
+                <Text style={styles.text}>  Area di arrivo</Text>
+                <SelectList data={data} style={{width:500, height:500, marginVertical:10}} boxStyles={{backgroundColor:'white'}} placeholder="Seleziona un' area" value={selected} setSelected={setSelected} save='key'/>
+                <View style={styles.buttonlist}>
+                    <TouchableOpacity style={styles.buttonlog} onPress={handleCancel}>
+                        <Text style={styles.textbutton}>Annulla</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.buttonCreate} onPress={handleProceed}>
+                        <Text style={styles.textbutton}>Procedi</Text>
+                    </TouchableOpacity>
+                </View>
+           </View>
+        </View>
     )
 
 }
@@ -103,52 +92,44 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         position: 'relative'
     },
+    text:{
+            fontSize: 18,
+            fontWeight: 'bold',
+            color: 'white',
+     },
   message:{
       fontSize: 24,
       fontWeight: 'bold',
       color: 'white'
   },
   button:{
-      justifyContent: 'center',
-      alignItems:'center',
-      backgroundColor:'#ff4700',
-      height: 60,
-      width:200,
-      borderRadius:15
-  },
-  buttonCenter:{
     justifyContent: 'center',
     alignItems:'center',
-    backgroundColor:'gold',
+    backgroundColor:'#ff4700',
     height: 60,
-    width:300,
-    //borderRadius:15
-  },
-  buttonSup:{
-      justifyContent: 'center',
-      alignItems:'center',
-      backgroundColor:'gold',
-      height: 60,
-      width:300,
-      borderTopLeftRadius: 15,
-      borderTopRightRadius: 15,
-  },
-  buttonInf:{
-      justifyContent: 'center',
-      alignItems:'center',
-      backgroundColor:'gold',
-      height: 60,
-      width:300,
-      borderBottomLeftRadius: 15,
-      borderBottomRightRadius: 15,
+    width:200,
+    borderRadius:15
   },
   buttonlog:{
     justifyContent: 'center',
     alignItems:'center',
     backgroundColor:'red',
     height: 60,
-    width:200,
+    width:125,
+    marginRight:10,
     borderRadius:15
+  },
+  buttonCreate:{
+      justifyContent: 'center',
+      alignItems:'center',
+      backgroundColor:'green',
+      height: 60,
+      width: 125,
+      marginTop:10,
+      marginBottom:10,
+      marginLeft:10,
+      marginRight:10,
+      borderRadius:15
   },
   textContainer: {
       flex: 1,
@@ -227,11 +208,11 @@ const styles = StyleSheet.create({
      },
      modalText:{
          fontSize: 24,
+         marginTop: 10,
          fontWeight: 'bold',
          color: 'white'
      },
     buttonlist:{
-        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
         flexDirection:'row',

@@ -2,11 +2,64 @@ import { useState,useEffect,useRef } from 'react';
 import { View,Platform,ScrollView, Text, TextInput,StyleSheet, TouchableOpacity,Button,Modal } from 'react-native';
 import {Divider} from "react-native-elements";
 import { useRouter } from 'expo-router'
+import { API_BASE_URL,API_PORT_OS,API_PORT_US } from '@/constants/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function NewArea(){
+    const endpointOS = API_BASE_URL+API_PORT_OS
     const router = useRouter()
+    const [name,setName] = useState("")
+    const [mac1,setMac1] = useState("")
+    const [mac2,setMac2] = useState("")
+    const [mac3,setMac3] = useState("")
+    const [mac4,setMac4] = useState("")
+    const [mac5,setMac5] = useState("")
+    const [mac6,setMac6] = useState("")
+    const [ip1,setIp1] = useState(0)
+    const [ip2,setIp2] = useState(0)
+    const [ip3,setIp3] = useState(0)
+    const [ip4,setIp4] = useState(0)
+    const [temperature,setTemperature] = useState(0)
+    const [humidity,setHumidity] = useState(0)
+    const [danger,setDanger] = useState(0)
     const handleCancel = async () =>{
         router.push("/")
+    }
+    const handleAddArea = async () =>{
+        const token = await AsyncStorage.getItem("token")
+        const ipAddress = ip1+"."+ip2+"."+ip3+"."+ip4
+        const macAddress = mac1+":"+mac2+":"+mac3+":"+mac4+":"+mac5+":"+mac6
+        const url = endpointOS+"/api/areas/"
+        const body = {
+            "name": name,
+            "beaconMAC": macAddress,
+            "thresholdTemperature": temperature,
+            "thresholdHumidity": humidity,
+            "dangerIndexThreshold": danger,
+            "ipRaspberry": ipAddress
+        }
+        console.log(body)
+        try{
+            const response = await fetch(url,{
+                method: 'POST',
+                headers:{
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+token
+                 },
+                body: JSON.stringify(body)
+            })
+            if(!response.ok){
+                console.log("Errore",response.status)
+            }else{
+                const data = await response.json()
+                if(data.result===0){
+                    alert("Area creata con successo!")
+                    router.push("/")
+                }
+            }
+        }catch(e){
+            console.log("Errore",url,":",e)
+       }
     }
     return(
         <View style={styles.container}>
@@ -14,63 +67,63 @@ export default function NewArea(){
                 <Text style={styles.start}>Nuova area </Text>
                 <View style={{alignSelf:'center',alignItems:'center'}}>
                 <Text style={styles.text}>  Nome</Text>
-                <TextInput  style={styles.input}/>
+                <TextInput  style={styles.input} value={name} onChangeText={setName}/>
                 <Text style={styles.text}> MAC del Beacon</Text>
                 <View style={styles.macContainer}>
                     <View style={styles.macPart}>
-                        <TextInput style={styles.inputMAC} maxLength={2}/>
+                        <TextInput style={styles.inputMAC} maxLength={2} value={mac1} onChangeText={setMac1}/>
                         <Text style={styles.separator}>:</Text>
                     </View>
                     <View style={styles.macPart}>
-                        <TextInput style={styles.inputMAC} maxLength={2}/>
+                        <TextInput style={styles.inputMAC} maxLength={2} value={mac2} onChangeText={setMac2}/>
                         <Text style={styles.separator}>:</Text>
                     </View>
                     <View style={styles.macPart}>
-                        <TextInput style={styles.inputMAC} maxLength={2}/>
+                        <TextInput style={styles.inputMAC} maxLength={2} value={mac3} onChangeText={setMac3}/>
                         <Text style={styles.separator}>:</Text>
                     </View>
                     <View style={styles.macPart}>
-                        <TextInput style={styles.inputMAC} maxLength={2}/>
+                        <TextInput style={styles.inputMAC} maxLength={2} value={mac4} onChangeText={setMac4}/>
                         <Text style={styles.separator}>:</Text>
                     </View>
                     <View style={styles.macPart}>
-                        <TextInput style={styles.inputMAC}maxLength={2}/>
+                        <TextInput style={styles.inputMAC}maxLength={2} value={mac5} onChangeText={setMac5}/>
                         <Text style={styles.separator}>:</Text>
                     </View>
                     <View style={styles.macPart}>
-                        <TextInput style={styles.inputMAC} maxLength={2}/>
+                        <TextInput style={styles.inputMAC} maxLength={2} value={mac6} onChangeText={setMac6}/>
                     </View>
                 </View>
                 <Text style={styles.text}> Indirizzo IP</Text>
                  <View style={styles.macContainer}>
                     <View style={styles.macPart}>
-                        <TextInput style={styles.inputIP}maxLength={3}/>
+                        <TextInput style={styles.inputIP}maxLength={3} keyboardType="number-pad" value={ip1} onChangeText={setIp1}/>
                         <Text style={styles.separator}>.</Text>
                     </View>
                     <View style={styles.macPart}>
-                        <TextInput style={styles.inputIP}maxLength={3}/>
+                        <TextInput style={styles.inputIP}maxLength={3} keyboardType="number-pad" value={ip2} onChangeText={setIp2}/>
                         <Text style={styles.separator}>.</Text>
                     </View>
                     <View style={styles.macPart}>
-                        <TextInput style={styles.inputIP}maxLength={3}/>
+                        <TextInput style={styles.inputIP}maxLength={3} keyboardType="number-pad" value={ip3} onChangeText={setIp3}/>
                         <Text style={styles.separator}>.</Text>
                     </View>
                     <View style={styles.macPart}>
-                        <TextInput style={styles.inputIP}maxLength={3}/>
+                        <TextInput style={styles.inputIP}maxLength={3} keyboardType="number-pad" value={ip4} onChangeText={setIp4}/>
                     </View>
                  </View>
                 </View>
-                <Text style={styles.text}>  Soglia umidità</Text>
-                <TextInput  style={styles.input}/>
                 <Text style={styles.text}>  Soglia temperatura</Text>
-                <TextInput  style={styles.input}/>
+                <TextInput  style={styles.input} keyboardType="number-pad" value={temperature} onChangeText={setTemperature}/>
+                <Text style={styles.text}>  Soglia umidità</Text>
+                <TextInput  style={styles.input} keyboardType="number-pad" value={humidity} onChangeText={setHumidity}/>
                 <Text style={styles.text}>  Soglia pericolo</Text>
-                <TextInput  style={styles.input}/>
+                <TextInput  style={styles.input} keyboardType="number-pad" value={danger} onChangeText={setDanger}/>
                 <View style={styles.buttonlist}>
                     <TouchableOpacity style={styles.buttonlog} onPress={handleCancel}>
                         <Text style={styles.textbutton}>Annulla</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.buttoncreate}>
+                    <TouchableOpacity style={styles.buttoncreate} onPress={handleAddArea}>
                         <Text style={styles.textbutton}>Crea Area</Text>
                     </TouchableOpacity>
                 </View>
@@ -141,7 +194,7 @@ const styles = StyleSheet.create({
     alignItems:'center',
     backgroundColor:'red',
     height: 60,
-    width:100,
+    width:125,
     borderRadius:15,
     marginRight: 30
   },
@@ -150,7 +203,7 @@ const styles = StyleSheet.create({
       alignItems:'center',
       backgroundColor:'green',
       height: 60,
-      width:100,
+      width:125,
       borderRadius:15,
       marginLeft: 30
   },
@@ -255,7 +308,6 @@ const styles = StyleSheet.create({
          color: 'white'
      },
     buttonlist:{
-        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
         flexDirection:'row',

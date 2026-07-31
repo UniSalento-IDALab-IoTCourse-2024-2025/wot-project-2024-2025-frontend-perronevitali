@@ -4,70 +4,76 @@ import {Divider} from "react-native-elements";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL,API_PORT_OS,API_PORT_US } from '@/constants/api';
 import { useRouter } from 'expo-router';
-export default function ThresholdScreen(){
+export default function ListUser(){
     const router = useRouter()
-    const [id,setId] = useState("")
-    const [temperature,setTemperature] = useState(0.0)
-    const [humidity,setHumidity] = useState(0.0)
-    const [danger,setDanger] = useState(0.0)
-    const endpointOS = API_BASE_URL+API_PORT_OS
-    const getArea = async () =>{
-        const area = JSON.parse(await AsyncStorage.getItem("infoArea"))
-        setId(area.id)
-        setTemperature(area.thresholdTemperature);
-        setHumidity(area.thresholdHumidity);
-        setDanger(area.dangerIndexThreshold);
-    }
-    useEffect(()=>{
-        getArea()
-    },[])
-    const handleCancel = async () =>{
+    const endpointUS = API_BASE_URL+API_PORT_US
+    const [users,setUsers] = useState([])
+    const [noAuthWorkers,setNoAuthWorkers] = useState([])
+    const comeBackToHome = () =>{
         router.replace("/")
     }
-    const handleEdit = async () =>{
-        const token = await AsyncStorage.getItem("token")
-        const body = {
-            "thresholdTemperature": temperature,
-            "thresholdHumidity": humidity,
-            "dangerIndexThreshold": danger
-        }
-        const url = endpointOS+'/api/areas/'+id+'/thresholds'
+    const getUsers = async () =>{
+        const token =  await AsyncStorage.getItem("token")
+        const area = JSON.parse(await AsyncStorage.getItem("infoArea"))
+        setNoAuthWorkers(area.unauthorizedWorkersIds)
+        const url = endpointUS+"/api/users/"
         try{
             const response = await fetch(url,{
-                method: 'PUT',
+                method: 'GET',
                 headers:{
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer '+token
-                },
-                body: JSON.stringify(body)
+                }
             })
             if(!response.ok){
-                console.log("Errore",response.status)
+                console.log("Errore",response.ok)
             }else{
-                alert("Solgie modificate con successo!")
-                router.push("/")
+                const data = await response.json()
+                const usersList = data.users.usersList
+                let personalArea = []
+                for (let user in usersList){
+                    if(usersList[user].currentAreaId===area.id)
+                        personalArea.push(usersList[user])
+                }
+                setUsers(personalArea)
             }
         }catch(e){
-            console.log("Errore chiamata api",url,":",e)
+            console.log("Errore chimata API",url,":",e)
         }
     }
+    useEffect(()=>{
+        getUsers()
+    },[])
+    const getBoxStyle=(user)=>{
+            switch(user.role){
+                case "ADMIN":
+                    return styles.boxAreaAdmin
+                case "WORKER":
+                    if(noAuthWorkers===null || noAuthWorkers===undefined)
+                        return styles.boxAreaAuth
+                    else
+                        for(let i=0;i<noAuthWorkers.lenght;i++){
+                            if(user.id===noAuthWorkers[i])
+                                return styles.boxAreaAuthNot
+                        }
+                        return styles.boxAreaAuth
+            }
+        }
     return(
         <View style={styles.container}>
-            <Text style={styles.start}>Modifica soglie</Text>
-            <Text style={styles.text}>  Soglia temperatura</Text>
-            <TextInput  style={styles.input} keyboardType="decimal-pad" value={temperature.toString()} onChangeText={(text) => setTemperature(parseFloat(text) || 0)} />
-            <Text style={styles.text}>  Soglia umidità</Text>
-            <TextInput  style={styles.input} keyboardType="decimal-pad" value={humidity.toString()} onChangeText={(text) => setHumidity(parseFloat(text) || 0)} />
-            <Text style={styles.text}>  Soglia pericolo</Text>
-            <TextInput  style={styles.input} keyboardType="decimal-pad" value={danger.toString()} onChangeText={(text) => setDanger(parseFloat(text) || 0)} />
-            <View style={styles.buttonlist}>
-                <TouchableOpacity style={styles.buttonlog} onPress={handleCancel}>
-                    <Text style={styles.textbutton}>Annulla</Text>
+            <ScrollView style={{backgroundColor:'#ffa420'}}>
+            <Text style={styles.start}>Lista utenti nell'area</Text>
+                {users?.map( (user,key)=>
+                    <View style={getBoxStyle(user)} key={key}>
+                        <Text style={styles.message}>Nome: <Text style={styles.infoText}>{user.nome}</Text></Text>
+                        <Text style={styles.message}>Cognome: <Text style={styles.infoText}>{user.cognome}</Text></Text>
+                        <Text style={styles.message}>Ruolo aziendale: <Text style={styles.infoText}>{user.role}</Text></Text>
+                    </View>
+                )}
+                <TouchableOpacity style={styles.button} onPress={comeBackToHome} >
+                    <Text style={styles.textbutton}>Torna nella home</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.buttoncreate} onPress={handleEdit}>
-                    <Text style={styles.textbutton}>Aggiorna soglie</Text>
-                </TouchableOpacity>
-            </View>
+            </ScrollView>
         </View>
     )
 
@@ -79,20 +85,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor:'#ffa420'
   },
-  start: {
-    fontSize: 30,
-    fontWeight: 'bold',
-    alignSelf: 'flex-start',
-    color: 'white',
-    marginTop: 50,
-    marginLeft: 10,
+  start:{
+      fontSize: 30,
+      fontWeight: 'bold',
+      alignItems: 'left',
+      alignSelf: 'left',
+      color: 'white',
+      marginTop:50,
+      marginLeft: 10,
   },
- text: {
-   fontSize: 20,
-   fontWeight: 'bold',
-   alignSelf: 'flex-start',
-   color: 'white',
- },
   boxAreaAuth: {
       width: 340,
       marginTop: 10,
@@ -117,6 +118,18 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         position: 'relative'
     },
+  boxAreaAdmin: {
+          width: 340,
+          marginTop: 10,
+          marginBottom: 10,
+          padding: 10,
+          backgroundColor: 'blue',
+          borderRadius: 10,
+          flexDirection: 'column',
+          alignItems: 'left',
+          justifyContent: 'space-between',
+          position: 'relative'
+  },
   message:{
       fontSize: 24,
       fontWeight: 'bold',
@@ -125,6 +138,7 @@ const styles = StyleSheet.create({
   button:{
     justifyContent: 'center',
     alignItems:'center',
+    alignSelf: 'center',
     backgroundColor:'#ff4700',
     height: 60,
     width:200,
@@ -135,18 +149,8 @@ const styles = StyleSheet.create({
     alignItems:'center',
     backgroundColor:'red',
     height: 60,
-    width:125,
-    borderRadius:15,
-    marginRight: 30
-  },
-  buttoncreate:{
-      justifyContent: 'center',
-      alignItems:'center',
-      backgroundColor:'green',
-      height: 60,
-      width: 125,
-      borderRadius:15,
-      marginLeft: 30
+    width:200,
+    borderRadius:15
   },
   textContainer: {
       flex: 1,
@@ -181,27 +185,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 5,
     paddingLeft: 8,
-    backgroundColor:'white',
-    alignSelf:'left'
+    backgroundColor:'white'
   },
-  inputMAC: {
-      width: 35,
-      height: 40,
-      margin: 9,
-      borderWidth: 1,
-      borderRadius: 5,
-      //paddingLeft: 8,
-      backgroundColor:'white'
-  },
-  inputIP: {
-        width: 60,
-        height: 40,
-        margin: 10,
-        borderWidth: 1,
-        borderRadius: 5,
-        paddingLeft: 8,
-        backgroundColor:'white'
-    },
   error: {
     color: 'red',
     marginTop: 10,
@@ -224,7 +209,7 @@ const styles = StyleSheet.create({
         //backgroundColor: 'rgba(0, 0, 0, 0.5)',
         justifyContent: 'flex-end',
     },
-  modalContent: {
+    modalContent: {
        backgroundColor: '#2c2e52',
        padding: 20,
        borderTopLeftRadius: 20,
@@ -249,6 +234,7 @@ const styles = StyleSheet.create({
          color: 'white'
      },
     buttonlist:{
+        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
         flexDirection:'row',
@@ -265,21 +251,12 @@ const styles = StyleSheet.create({
         alignSelf: 'right',
         color: '#ffa420',
     },
-    macContainer:{
+    addButton:{
+        width: 38,
+        height: 38,
+        borderRadius: 20,
+        backgroundColor: 'green',
         justifyContent: 'center',
         alignItems: 'center',
-        flexDirection: 'row'
-    },
-    macPart: {
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    separator: {
-      fontSize: 22,
-      fontWeight: 'bold',
-      color: 'white',
-      marginHorizontal: 2,
-      textAlignVertical: 'center',
-      includeFontPadding: false,
-    },
+    }
 });

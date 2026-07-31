@@ -1,74 +1,49 @@
 import { useState,useEffect,useRef } from 'react';
 import { View,Platform,ScrollView, Text, StyleSheet, TouchableOpacity,Button,Modal } from 'react-native';
-import {Divider} from "react-native-elements";
-import { List } from 'react-native-paper';
-import { useRouter } from 'expo-router'
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { RadioButton } from 'react-native-paper';
+import { useRouter } from 'expo-router';
 
-export default function TaskOptionsMenu(){
+export default function LoadInStoreScreen(){
+    const [selected,setSelected]= useState("")
     const router = useRouter()
-    const comeBackToHome = () =>{
+    const handleCancel = async () =>{
         router.replace("/")
     }
-    const goToLoad = async(typeload) =>{
-        await AsyncStorage.setItem("typeload",typeload)
-        router.replace("/activity/externopt")
+    const handleProceed = async () =>{
+            router.replace("/user/listWorker")
     }
     return(
         <View style={styles.container}>
-                <Text style={styles.start}>Scegli il tipo di Task</Text>
-                <List.Section>
-                      <List.Item
-                        title="Carico"
-                        style={styles.buttonSup}
-                        titleStyle={styles.modalText}
-                        right={() => <List.Icon icon="chevron-right" />}
-                        onPress={() => {goToLoad("load")}}
-                      />
-
-                      <List.Item
-                        title="Scarico"
-                        style={styles.buttonCenter}
-                        titleStyle={styles.modalText}
-                        right={() => <List.Icon icon="chevron-right" />}
-                        onPress={() => {goToLoad("unload")}}
-                      />
-                      <List.Item
-                        title="Spostamento"
-                        style={styles.buttonCenter}
-                        titleStyle={styles.modalText}
-                        right={() => <List.Icon icon="chevron-right" />}
-                        onPress={() => {router.replace("/activity/shift")}}
-                      />
-                      <List.Item
-                        title="Ispezione"
-                        style={styles.buttonCenter}
-                        titleStyle={styles.modalText}
-                        right={() => <List.Icon icon="chevron-right" />}
-                        onPress={() => {router.replace("/activity/inspection")}}
-                      />
-                      <List.Item
-                        title="Manutenzione"
-                        style={styles.buttonInf}
-                        titleStyle={styles.modalText}
-                        right={() => <List.Icon icon="chevron-right" />}
-                        onPress={() => {router.replace("/activity/maintenance")}}
-                      />
-                </List.Section>
-                <TouchableOpacity style={styles.button} onPress={comeBackToHome}>
-                    <Text style={styles.textbutton}>Torna alla home</Text>
+            <Text style={styles.start}>Carica in un deposito</Text>
+            <View style={styles.boxMessage}>
+                <Text style={styles.message}>Deposito 1 </Text>
+                <View style={styles.radioContainer}>
+                    <RadioButton
+                        value="deposito"
+                        onCheck={()=>{setSelected(value)}}
+                        color="white"
+                        uncheckedColor="white"
+                    />
+                </View>
+            </View>
+            <View style={styles.buttonlist}>
+                <TouchableOpacity style={styles.buttonlog} onPress={handleCancel}>
+                    <Text style={styles.textbutton}>Annulla</Text>
                 </TouchableOpacity>
-       </View>
-
+                <TouchableOpacity style={styles.buttonCreate} onPress={handleProceed}>
+                    <Text style={styles.textbutton}>Procedi</Text>
+                </TouchableOpacity>
+            </View>
+        </View>
     )
-
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor:'#ffa420'
+    backgroundColor:'#ffa420',
   },
   start:{
       fontSize: 30,
@@ -80,6 +55,7 @@ const styles = StyleSheet.create({
       marginLeft: 10,
   },
   boxAreaAuth: {
+      flex: 1,
       width: 340,
       marginTop: 10,
       marginBottom: 10,
@@ -109,46 +85,30 @@ const styles = StyleSheet.create({
       color: 'white'
   },
   button:{
-      justifyContent: 'center',
-      alignItems:'center',
-      backgroundColor:'#ff4700',
-      height: 60,
-      width:200,
-      borderRadius:15
-  },
-  buttonCenter:{
     justifyContent: 'center',
     alignItems:'center',
-    backgroundColor:'gold',
+    backgroundColor:'#ff4700',
     height: 60,
-    width:300,
-    //borderRadius:15
-  },
-  buttonSup:{
-      justifyContent: 'center',
-      alignItems:'center',
-      backgroundColor:'gold',
-      height: 60,
-      width:300,
-      borderTopLeftRadius: 15,
-      borderTopRightRadius: 15,
-  },
-  buttonInf:{
-      justifyContent: 'center',
-      alignItems:'center',
-      backgroundColor:'gold',
-      height: 60,
-      width:300,
-      borderBottomLeftRadius: 15,
-      borderBottomRightRadius: 15,
+    width:200,
+    borderRadius:15
   },
   buttonlog:{
     justifyContent: 'center',
     alignItems:'center',
     backgroundColor:'red',
     height: 60,
-    width:200,
+    width:140,
+    marginRight:10,
     borderRadius:15
+  },
+  buttonCreate:{
+      justifyContent: 'center',
+      alignItems:'center',
+      backgroundColor:'green',
+      height: 60,
+      width:140,
+      marginLeft:10,
+      borderRadius:15
   },
   textContainer: {
       flex: 1,
@@ -227,11 +187,11 @@ const styles = StyleSheet.create({
      },
      modalText:{
          fontSize: 24,
+         marginTop: 10,
          fontWeight: 'bold',
          color: 'white'
      },
     buttonlist:{
-        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
         flexDirection:'row',
@@ -248,4 +208,21 @@ const styles = StyleSheet.create({
         alignSelf: 'right',
         color: '#ffa420',
     },
+    boxMessage: {
+          width: 340,
+          height: 90,
+          marginTop: 30,
+          marginBottom: 30,
+          padding: 10,
+          backgroundColor: '#2c2e52',
+          borderRadius: 10,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+      },
+      message:{
+          fontSize: 24,
+          fontWeight: 'bold',
+          color: 'white'
+      },
 });

@@ -3,16 +3,11 @@ import { StyleSheet,View, Button, Text, TextInput, TouchableOpacity,ScrollView} 
 import { Divider } from 'react-native-elements';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {SelectList} from 'react-native-dropdown-select-list';
+import {MultipleSelectList} from 'react-native-dropdown-select-list';
 import { API_BASE_URL,API_PORT_OS,API_PORT_US } from '@/constants/api';
 
-export default function CreateAdmin () {
+export default function CreateWorker () {
     const router = useRouter()
-    const endpointOS = API_BASE_URL+API_PORT_OS
-    const [areaNames,setAreaNames] = useState([])
-    const [areas,setAreas] = useState([])
-    const [selected,setSelected] = useState([])
-    const [managed,setManaged] =  useState(null)
     const [nome,setNome] = useState("")
     const [cognome,setCognome] = useState("")
     const [email,setEmail] = useState("")
@@ -26,101 +21,45 @@ export default function CreateAdmin () {
             alert("Per favore riempi tutti i campi!")
         if(password!==confirm)
             alert("Le 2 password non corrispondono!")
-        let managed = []
-        if(!selected)
-            alert("Seleziona un area!")
-        if(selected==="Tutte")
-             managed=null
-        else{
-            const area =  areas.find(({value})=>value===selected)
-            managed = area.key
-        }
         const body={
             "nome": nome,
             "cognome": cognome,
             "email": email,
             "password": password,
-            "managedAreaId": managed,
-            "role": "ADMIN"
+            "role":"WORKER"
         }
         const token = await AsyncStorage.getItem("token")
-        const url = API_BASE_URL+API_PORT_US+'/api/admins/'
-        try{
-            const response = await fetch(url,{
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer '+token
-                },
-                body: JSON.stringify(body)
-            })
-            if(!response.ok){
-                console.log("Errore",url,":",response.status)
-                const error = await response.json()
-                if(response.status===409){
-                    if(error.result===2)
+       const url = API_BASE_URL+API_PORT_US+'/api/registration/'
+       try{
+           const response = await fetch(url,{
+               method: 'POST',
+               headers: {
+                   'Content-Type': 'application/json',
+                   'Authorization': 'Bearer '+token
+               },
+               body: JSON.stringify(body)
+           })
+           if(!response.ok){
+               console.log("Errore",url,":",response.status)
+               if(response.status===409){
+                   const error = await response.json()
+                   if(error.result===1)
                         alert("Email già presente!")
-                }
-            }else{
-                const data = await response.json()
-                if(data.result===0){
-                    alert("Amminstratore creato con successo!")
-                    router.push("/")
-                }
-            }
-        }catch(e){
-            console.log("Errore api registration",e)
-        }
+               }
+           }else{
+               const data = await response.json()
+               if(data.result===0){
+                   alert("Worker creato con successo!")
+                   router.push("/")
+               }
+           }
+       }catch(e){
+           console.log("Errore api registration",e)
+       }
     }
-    const getAreas = async () =>{
-        const token = await AsyncStorage.getItem("token")
-        const url = endpointOS+'/api/areas/'
-        try{
-            const response = await fetch(url,{
-                method : 'GET',
-                headers:{
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer '+token
-                }
-            })
-            if(!response.ok){
-                console.log("Errore",response.status)
-            }else{
-                const data = await response.json()
-                const areas = data.areas.areasList
-                let names = ["Tutte"]
-                let areasobj = []
-                for(let area in areas){
-                    const name = areas[area].name
-                    const id = areas[area].id
-                    const bodyArea = {
-                        "key": id,
-                        "value": name
-                    }
-                    names.push(name)
-                    areasobj.push(bodyArea)
-                }
-                setAreaNames(names)
-                setAreas(areasobj)
-            }
-        }catch(e){
-            console.log("Errore ",url,":",e)
-        }
-    }
-    useEffect(()=>{
-        getAreas()
-    },[])
-     useEffect(() => {
-         if (selected) {
-             console.log("Nuovi valori:", selected)
-             if(selected==="Tutte"){
-                 alert("Se selezioni l'opzione \"Tutte\" tutte le altre aree  saranno selezionate in automatico!")
-             }
-         }
-      }, [selected]);
     return(
         <View style={styles.container}>
-            <Text style={styles.start}>Crea un nuovo amminstratore</Text>
+            <Text style={styles.start}>Crea un nuovo Lavoratore</Text>
             <View>
                 <Text style={styles.text}>  Nome</Text>
                 <TextInput  style={styles.input} value={nome} onChangeText={setNome} />
@@ -142,8 +81,6 @@ export default function CreateAdmin () {
                     secureTextEntry
                     value={confirm} onChangeText={setConfirm}
                 />
-                <Text style={styles.text}>  Aree da amministrare:</Text>
-                <SelectList data={areaNames} style={{width:500, height:500, marginVertical:10}} boxStyles={{backgroundColor:'white'}} placeholder="Seleziona un' area" value={selected} setSelected={setSelected} save='key'/>
             </View>
             <View style={styles.buttonlist}>
                 <TouchableOpacity style={styles.buttonlog} onPress={handleCancel}>

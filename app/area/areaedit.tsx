@@ -6,6 +6,8 @@ import { API_BASE_URL,API_PORT_OS,API_PORT_US } from '@/constants/api';
 import { useRouter } from 'expo-router';
 export default function EditArea(){
     const router = useRouter()
+    const endpointOS = API_BASE_URL+API_PORT_OS
+    const [id,setID] = useState("")
     const [name,setName] = useState("")
     const [mac1,setMac1] = useState("")
     const [mac2,setMac2] = useState("")
@@ -19,6 +21,7 @@ export default function EditArea(){
     const [ip4,setIp4] = useState(0)
     const getArea = async () => {
         const area = JSON.parse(await AsyncStorage.getItem("infoArea"))
+        setID(area.id)
         const mac = area.beaconMAC
         setName(area.name)
         setMac1(mac.split(":")[0])
@@ -38,6 +41,37 @@ export default function EditArea(){
     },[])
     const comeToOption= async ()=>{
         router.push("/area/areaopt")
+    }
+    const handleEdit = async () =>{
+        const token = await AsyncStorage.getItem("token")
+        const url = endpointOS+'/api/areas/'+id
+        const ip = ip1+"."+ip2+"."+ip3+"."+ip4
+        const mac = mac1+":"+mac2+":"+mac3+":"+mac4+":"+mac5+":"+mac6
+        const body ={
+            "name":name,
+            "beaconMAC":mac,
+            "ipRaspberry": ip,
+        }
+        try{
+            const response = await fetch(url,{
+                method: 'PUT',
+                headers:{
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+token
+                },
+                body: JSON.stringify(body)
+            })
+            if(!response.ok){
+                console.log("Errore",response.status)
+            }else{
+                const data = await response.json()
+                console.log(data)
+                alert("Modifica eseguita con successo!")
+                router.push("/")
+            }
+        }catch(e){
+            console.log("Errore api PUT api/areas/",e)
+        }
     }
     return(
         <View style={styles.container}>
@@ -92,7 +126,7 @@ export default function EditArea(){
                 <TouchableOpacity style={styles.buttonlog} onPress={comeToOption}>
                     <Text style={styles.textbutton}>Annulla</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.buttoncreate}>
+                <TouchableOpacity style={styles.buttoncreate} onPress={handleEdit}>
                     <Text style={styles.textbutton}>Modifca dati Area</Text>
                 </TouchableOpacity>
              </View>
@@ -154,7 +188,7 @@ const styles = StyleSheet.create({
     alignItems:'center',
     backgroundColor:'#ff4700',
     height: 60,
-    width:200,
+    width:125,
     borderRadius:15
   },
   buttonlog:{
@@ -162,7 +196,7 @@ const styles = StyleSheet.create({
     alignItems:'center',
     backgroundColor:'red',
     height: 60,
-    width:100,
+    width:125,
     borderRadius:15,
     marginRight: 30
   },

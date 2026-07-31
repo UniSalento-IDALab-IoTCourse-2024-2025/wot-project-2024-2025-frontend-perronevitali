@@ -17,11 +17,7 @@ export default function AdminHome () {
     const [isModalVisible,setModalVisible] = useState(false)
     const [selectedArea,setSelectedArea] = useState(null)
     const getManagedAreas = async (user,token) =>{
-        let url = ""
-        if(user.email!=="admin@faro.it")
-            url = endpointUS+'/api/admins/'+user.id
-        else
-            url = endpointOS+'/api/areas/'
+        const url = endpointUS+'/api/admins/'+user.id
         try{
             const response = await fetch(url,{
                 method: 'GET',
@@ -35,23 +31,45 @@ export default function AdminHome () {
                 router.replace("/login")
             }else{
                 const data = await response.json()
-                if(user.email!=="admin@faro.it"){
-                    const managedsID = [data.admins.adminsList[0].managedAreaId]
-                    let managedAreas = []
-                    for(let managedId in managedsID){
-                        const managedArea = await getArea(managedsID[managedId],token)
-                        managedAreas.push(managedArea)
-                    }
-                    setManagedAreas(managedAreas)
-                    await AsyncStorage.setItem("manageAreas",JSON.stringify(managedAreas))
+                const managedID = data.admins.adminsList[0].managedAreaId
+                let managedAreas = []
+                if(managedID){
+                    const managedArea = await getArea(managedID,token)
+                    if(managedArea)
+                           managedAreas.push(managedArea)
+
                 }else{
-                    const managedAreas = data.areas.areasList
-                    setManagedAreas(managedAreas)
-                    await AsyncStorage.setItem("manageAreas",JSON.stringify(managedAreas))
+                    managedAreas = await getAllAreas(token)
                 }
+                setManagedAreas(managedAreas)
+                await AsyncStorage.setItem("managedId",JSON.stringify(managedID))
+                await AsyncStorage.setItem("manageAreas",JSON.stringify(managedAreas))
             }
         }catch(e){
             console.log("Errore api/admins/idadmin",e)
+        }
+    }
+    const getAllAreas = async (token) =>{
+        const url = endpointOS+'/api/areas/'
+        try{
+            const response = await fetch(url,{
+                method: 'GET',
+                headers:{
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+token
+                }
+            })
+            if(!response.ok){
+                response("Errore api/areas/",response.status)
+                return null
+            }else{
+                const data = await response.json()
+                const areas = data.areas.areasList
+                return areas
+            }
+        }catch(e){
+            console.log("Errore chiamata  API /api/areas/",e)
+            return null
         }
     }
     const getArea = async (managed,token) =>{
@@ -66,15 +84,19 @@ export default function AdminHome () {
             })
 
             if(!response.ok){
-                console.log(response.status)
+                console.log("Errore /api/areas/"+managed,response.status)
                 return null
             }else{
                 const data = await response.json()
-                const area = data.areas.areasList[0]
-                return area
+                if(data.result===0){
+                    const area = data.areas.areasList[0]
+                    return area
+                }else{
+                    return null
+                }
             }
         }catch(e){
-            console.log("Errore chiamata  API /api/areas/idArea:",e)
+            console.log("Errore chiamata  API /api/areas/:"+managed,e)
             return null
         }
 
@@ -127,7 +149,7 @@ export default function AdminHome () {
                     <TouchableOpacity style={styles.boxAreaAuth} key={key}>
                         <Text style={styles.message}> {managed?.name} </Text>
                         <Text style={styles.textbutton}> Stato area: {getStatusString(managed?.status)}</Text>
-                        <Text style ={styles.textbutton}> Numero di lavoratori : {managed?.userIdsInArea.length}</Text>
+                        <Text style ={styles.textbutton}> Numero di lavoratori : {managed?.userIdsInArea?.length}</Text>
                         <Text style ={styles.textbutton}> Temperatura attuale : {managed?.currentTemperature} °C </Text>
                          <Text style ={styles.textbutton}> Umidità attuale : {managed?.currentHumidity} % {"\n"}</Text>
                         <View style={styles.buttonlist}>

@@ -4,70 +4,72 @@ import {Divider} from "react-native-elements";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL,API_PORT_OS,API_PORT_US } from '@/constants/api';
 import { useRouter } from 'expo-router';
-export default function ThresholdScreen(){
+import Checkbox from 'expo-checkbox';
+export default function ListWorker(){
     const router = useRouter()
-    const [id,setId] = useState("")
-    const [temperature,setTemperature] = useState(0.0)
-    const [humidity,setHumidity] = useState(0.0)
-    const [danger,setDanger] = useState(0.0)
-    const endpointOS = API_BASE_URL+API_PORT_OS
-    const getArea = async () =>{
-        const area = JSON.parse(await AsyncStorage.getItem("infoArea"))
-        setId(area.id)
-        setTemperature(area.thresholdTemperature);
-        setHumidity(area.thresholdHumidity);
-        setDanger(area.dangerIndexThreshold);
+    const endpointUS = API_BASE_URL+API_PORT_US
+    const [workers,setWorkers] = useState([])
+    const [selectedWorkers, setSelectedWorkers] = useState<number[]>([])
+    const toggleWorker = (id: number) => {
+        if (selectedWorkers.includes(id)) {
+            setSelectedWorkers(selectedWorkers.filter(w => w !== id))
+        } else {
+            setSelectedWorkers([...selectedWorkers, id])
+        }
     }
-    useEffect(()=>{
-        getArea()
-    },[])
-    const handleCancel = async () =>{
+    const handleCancel = () =>{
         router.replace("/")
     }
-    const handleEdit = async () =>{
-        const token = await AsyncStorage.getItem("token")
-        const body = {
-            "thresholdTemperature": temperature,
-            "thresholdHumidity": humidity,
-            "dangerIndexThreshold": danger
-        }
-        const url = endpointOS+'/api/areas/'+id+'/thresholds'
+    const getUsers = async () =>{
+        const token =  await AsyncStorage.getItem("token")
+        const url = endpointUS+"/api/workers/"
         try{
             const response = await fetch(url,{
-                method: 'PUT',
+                method: 'GET',
                 headers:{
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer '+token
-                },
-                body: JSON.stringify(body)
+                }
             })
             if(!response.ok){
-                console.log("Errore",response.status)
+                console.log("Errore ",response.status)
             }else{
-                alert("Solgie modificate con successo!")
-                router.push("/")
+                const data = await response.json()
+                const workers = data.workers.workersList
+                setWorkers(workers)
             }
+
         }catch(e){
-            console.log("Errore chiamata api",url,":",e)
+            console.log("Errore chimata API",url,":",e)
         }
     }
+    useEffect(()=>{
+        getUsers()
+    },[])
     return(
         <View style={styles.container}>
-            <Text style={styles.start}>Modifica soglie</Text>
-            <Text style={styles.text}>  Soglia temperatura</Text>
-            <TextInput  style={styles.input} keyboardType="decimal-pad" value={temperature.toString()} onChangeText={(text) => setTemperature(parseFloat(text) || 0)} />
-            <Text style={styles.text}>  Soglia umidità</Text>
-            <TextInput  style={styles.input} keyboardType="decimal-pad" value={humidity.toString()} onChangeText={(text) => setHumidity(parseFloat(text) || 0)} />
-            <Text style={styles.text}>  Soglia pericolo</Text>
-            <TextInput  style={styles.input} keyboardType="decimal-pad" value={danger.toString()} onChangeText={(text) => setDanger(parseFloat(text) || 0)} />
-            <View style={styles.buttonlist}>
-                <TouchableOpacity style={styles.buttonlog} onPress={handleCancel}>
-                    <Text style={styles.textbutton}>Annulla</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.buttoncreate} onPress={handleEdit}>
-                    <Text style={styles.textbutton}>Aggiorna soglie</Text>
-                </TouchableOpacity>
-            </View>
+            <ScrollView style={{backgroundColor:'#ffa420'}}>
+                <Text style={styles.start}>Lista lavoratori</Text>
+                {workers?.map((worker,key)=>
+                    <View key={key} style={styles.boxMessage}>
+                        <Checkbox
+                            value={selectedWorkers.includes(worker.id)}
+                            onValueChange={() => toggleWorker(worker.id)}
+                        />
+                        <Text style={styles.message}>Nome: <Text style={styles.infoText}>{worker.nome}</Text></Text>
+                        <Text style={styles.message}>Cognome: <Text style={styles.infoText}>{worker.cognome}</Text></Text>
+                         <Text style={styles.message}>email: <Text style={styles.infoText}>{worker.email}</Text></Text>
+                    </View>
+                )}
+                <View style={styles.buttonlist}>
+                    <TouchableOpacity style={styles.buttonlog} onPress={handleCancel}>
+                        <Text style={styles.textbutton}>Annulla</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.buttonCreate}>
+                        <Text style={styles.textbutton}>Crea Task</Text>
+                    </TouchableOpacity>
+                </View>
+            </ScrollView>
         </View>
     )
 
@@ -79,20 +81,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor:'#ffa420'
   },
-  start: {
-    fontSize: 30,
-    fontWeight: 'bold',
-    alignSelf: 'flex-start',
-    color: 'white',
-    marginTop: 50,
-    marginLeft: 10,
+  start:{
+      fontSize: 30,
+      fontWeight: 'bold',
+      alignItems: 'left',
+      alignSelf: 'left',
+      color: 'white',
+      marginTop:50,
+      marginLeft: 10,
   },
- text: {
-   fontSize: 20,
-   fontWeight: 'bold',
-   alignSelf: 'flex-start',
-   color: 'white',
- },
   boxAreaAuth: {
       width: 340,
       marginTop: 10,
@@ -118,7 +115,7 @@ const styles = StyleSheet.create({
         position: 'relative'
     },
   message:{
-      fontSize: 24,
+      fontSize: 18,
       fontWeight: 'bold',
       color: 'white'
   },
@@ -135,19 +132,21 @@ const styles = StyleSheet.create({
     alignItems:'center',
     backgroundColor:'red',
     height: 60,
-    width:125,
-    borderRadius:15,
-    marginRight: 30
+    width: 125,
+    marginRight:10,
+    marginLeft:10,
+    borderRadius:15
   },
-  buttoncreate:{
+  buttonCreate:{
       justifyContent: 'center',
       alignItems:'center',
       backgroundColor:'green',
       height: 60,
       width: 125,
-      borderRadius:15,
-      marginLeft: 30
-  },
+      marginRight:10,
+      marginLeft:10,
+      borderRadius:15
+    },
   textContainer: {
       flex: 1,
   },
@@ -181,27 +180,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 5,
     paddingLeft: 8,
-    backgroundColor:'white',
-    alignSelf:'left'
+    backgroundColor:'white'
   },
-  inputMAC: {
-      width: 35,
-      height: 40,
-      margin: 9,
-      borderWidth: 1,
-      borderRadius: 5,
-      //paddingLeft: 8,
-      backgroundColor:'white'
-  },
-  inputIP: {
-        width: 60,
-        height: 40,
-        margin: 10,
-        borderWidth: 1,
-        borderRadius: 5,
-        paddingLeft: 8,
-        backgroundColor:'white'
-    },
   error: {
     color: 'red',
     marginTop: 10,
@@ -211,10 +191,9 @@ const styles = StyleSheet.create({
       marginBottom: 20,
     },
   checkbox: {
-      alignSelf: 'left',
-      marginTop: 10,
-      marginBottom: 10,
-      marginLeft: 10,
+      position: 'absolute',
+      top: 10,
+      right: 10,
     },
   label: {
       margin: 8,
@@ -224,7 +203,7 @@ const styles = StyleSheet.create({
         //backgroundColor: 'rgba(0, 0, 0, 0.5)',
         justifyContent: 'flex-end',
     },
-  modalContent: {
+    modalContent: {
        backgroundColor: '#2c2e52',
        padding: 20,
        borderTopLeftRadius: 20,
@@ -249,6 +228,7 @@ const styles = StyleSheet.create({
          color: 'white'
      },
     buttonlist:{
+        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
         flexDirection:'row',
@@ -259,27 +239,27 @@ const styles = StyleSheet.create({
         right: 10,
     },
     infoText:{
-        fontSize: 24,
+        fontSize: 18,
         fontWeight: 'bold',
-        alignItems: 'right',
-        alignSelf: 'right',
+
         color: '#ffa420',
     },
-    macContainer:{
+    addButton:{
+        width: 38,
+        height: 38,
+        borderRadius: 20,
+        backgroundColor: 'green',
         justifyContent: 'center',
         alignItems: 'center',
-        flexDirection: 'row'
     },
-    macPart: {
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    separator: {
-      fontSize: 22,
-      fontWeight: 'bold',
-      color: 'white',
-      marginHorizontal: 2,
-      textAlignVertical: 'center',
-      includeFontPadding: false,
-    },
+    boxMessage: {
+      width: 340,
+      marginTop: 10,
+      marginBottom: 10,
+      padding: 10,
+      backgroundColor: '#2c2e52',
+      borderRadius: 10,
+      position: 'relative',
+      //justifyContent: 'space-between',
+  },
 });

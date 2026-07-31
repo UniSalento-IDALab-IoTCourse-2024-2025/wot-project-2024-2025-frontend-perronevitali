@@ -5,59 +5,68 @@ import { List } from 'react-native-paper';
 import { useRouter } from 'expo-router'
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function TaskOptionsMenu(){
+export default function ExternOptionScreen(){
+    const [typeload,setTypeLoad] = useState("")
+    const verbLoad="Caricare"
+    const verbLoad2="Carica"
+    const verbUnload="Scaricare"
+    const verbUnload2="Scarica"
+    const [verb1,setVerb1] = useState("")
+    const [verb2,setVerb2] = useState("")
+    const getType = async () =>{
+        const typel = await AsyncStorage.getItem("typeload")
+        setTypeLoad(typel)
+        if(typel==="load"){
+            setVerb1(verbLoad)
+            setVerb2(verbLoad2)
+        }else{
+            setVerb1(verbUnload)
+            setVerb2(verbUnload2)
+        }
+    }
+    useEffect(()=>{
+        getType()
+    },[])
     const router = useRouter()
-    const comeBackToHome = () =>{
+    const comeBackToHome = async () => {
         router.replace("/")
     }
-    const goToLoad = async(typeload) =>{
-        await AsyncStorage.setItem("typeload",typeload)
-        router.replace("/activity/externopt")
+    const goToItem = () =>{
+        if(typeload==="load"){
+            router.replace("/activity/loading/loaditem")
+        }else{
+            router.replace("/activity/unloading/unloaditem")
+        }
+    }
+    const goToStore = () =>{
+        if(typeload==="load"){
+            router.replace("/activity/loading/loadinstore")
+        }else{
+            router.replace("/activity/unloading/unloadinstore")
+        }
     }
     return(
         <View style={styles.container}>
-                <Text style={styles.start}>Scegli il tipo di Task</Text>
+                <Text style={styles.start}>Seleziona cosa  vuoi {verb1}</Text>
                 <List.Section>
-                      <List.Item
-                        title="Carico"
+                    <List.Item
+                        title={verb2+" item"}
                         style={styles.buttonSup}
                         titleStyle={styles.modalText}
                         right={() => <List.Icon icon="chevron-right" />}
-                        onPress={() => {goToLoad("load")}}
-                      />
-
-                      <List.Item
-                        title="Scarico"
-                        style={styles.buttonCenter}
-                        titleStyle={styles.modalText}
-                        right={() => <List.Icon icon="chevron-right" />}
-                        onPress={() => {goToLoad("unload")}}
-                      />
-                      <List.Item
-                        title="Spostamento"
-                        style={styles.buttonCenter}
-                        titleStyle={styles.modalText}
-                        right={() => <List.Icon icon="chevron-right" />}
-                        onPress={() => {router.replace("/activity/shift")}}
-                      />
-                      <List.Item
-                        title="Ispezione"
-                        style={styles.buttonCenter}
-                        titleStyle={styles.modalText}
-                        right={() => <List.Icon icon="chevron-right" />}
-                        onPress={() => {router.replace("/activity/inspection")}}
-                      />
-                      <List.Item
-                        title="Manutenzione"
+                        onPress={goToItem}
+                    />
+                    <List.Item
+                        title={verb2+" sostanza da deposito"}
                         style={styles.buttonInf}
-                        titleStyle={styles.modalText}
+                        titleStyle={styles.modalText2}
                         right={() => <List.Icon icon="chevron-right" />}
-                        onPress={() => {router.replace("/activity/maintenance")}}
-                      />
-                </List.Section>
-                <TouchableOpacity style={styles.button} onPress={comeBackToHome}>
+                        onPress={goToStore}
+                    />
+               </List.Section>
+               <TouchableOpacity style={styles.button} onPress={comeBackToHome}>
                     <Text style={styles.textbutton}>Torna alla home</Text>
-                </TouchableOpacity>
+               </TouchableOpacity>
        </View>
 
     )
@@ -230,6 +239,11 @@ const styles = StyleSheet.create({
          fontWeight: 'bold',
          color: 'white'
      },
+    modalText2:{
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: 'white'
+    },
     buttonlist:{
         flex: 1,
         justifyContent: 'center',
