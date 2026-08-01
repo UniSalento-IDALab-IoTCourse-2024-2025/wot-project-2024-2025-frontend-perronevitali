@@ -86,11 +86,11 @@ export default function InventoryScreen(){
         const token = await AsyncStorage.getItem("token")
         try{
             const response = await fetch(url,{
-                        method: 'DELETE',
-                        headers:{
-                            'Content-Type': 'application/json',
-                            'Authorization': 'Bearer '+token
-                        }
+                method: 'DELETE',
+                headers:{
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+token
+                }
             })
             if(!response.ok){
                 console.log("Errore",response.status)
@@ -134,11 +134,11 @@ export default function InventoryScreen(){
                 {items?.map((item,key)=>
                     <View style={styles.containerMap} key={key}>
                         <View style={styles.boxMessage}>
-                            <Text style={styles.infoText}>{item.nome}</Text>
-                            <Text style={styles.infoText}>{item.substanceName}</Text>
-                            <Text style={styles.infoText}> {item.quantity} {item.unit} </Text>
+                            <Text style={styles.message}>Nome: <Text style={styles.infoText}>{item.nome}</Text></Text>
+                            <Text style={styles.message}>Sostanza: <Text style={styles.infoText}>{item.substanceName}</Text></Text>
+                            <Text style={styles.message}>Quantità: <Text style={styles.infoText}> {item.quantity} {item.unit} </Text></Text>
                         </View>
-                        <TouchableOpacity style={styles.boxAreaAuthNot}>
+                        <TouchableOpacity style={styles.boxAreaAuthNot} onPress={()=>{deleteItem(item.id)}}>
                             <EvilIcons name="trash" size={32} color="white" />
                         </TouchableOpacity>
                     </View>

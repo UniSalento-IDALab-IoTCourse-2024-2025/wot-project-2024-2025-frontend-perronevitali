@@ -3,35 +3,155 @@ import { View,Platform,ScrollView, Text, TextInput, StyleSheet, TouchableOpacity
 import {Divider} from "react-native-elements";
 import {SelectList} from 'react-native-dropdown-select-list';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL,API_PORT_OS,API_PORT_US } from '@/constants/api';
 
 export default function UpdateStoreScreen(){
+    const endpointOS = API_BASE_URL+API_PORT_OS
     const router = useRouter()
-    const [selectedStore,setSelectedStore] = useState('')
-    const [selectedSub,setSelectedSub] = useState('')
-    const stores = ["store 1","store 2","store, 3"]
-    const substances = ["sub 1","sub 2","sub 3"]
+    const [selectedStore,setSelectedStore] = useState(null)
+    const [substance,setSubstance] = useState(null)
+    const [startQuantity,setStartQuantity] = useState(null)
+    const [unit,setUnit] = useState(null)
+    const [final,setFinal] = useState(null)
+    const [storesName,setStoresName] = useState([])
+    const [stores,setStores] = useState([])
     const handleCancel = async () =>{
         router.replace("/")
+    }
+    const fetchData = async () =>{
+        const token = await AsyncStorage.getItem("token")
+        const managed = JSON.parse(await AsyncStorage.getItem("managedId"))
+        if(managed)
+            getStoresArea(token,managed)
+        else
+            getAllStores(token)
+    }
+
+    const getAllStores = async (token) =>{
+        const url = endpointOS+"/api/items/"
+        try{
+            const response = await fetch(url,{
+                method: 'GET',
+                headers:{
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+token
+                }
+            })
+            if(!response.ok){
+                console.log("Errore",response.status)
+            }else{
+                const data = await response.json()
+                const itemsList = data.items.itemsList
+                const stores = []
+                const storesName = []
+                for(let store in itemsList){
+                    if(itemsList[store].deposito){
+                        stores.push(itemsList[store])
+                        storesName.push(itemsList[store].nome)
+                    }
+                }
+                setStores(stores)
+                setStoresName(storesName)
+            }
+        }catch(e){
+            console.log("Errore chiamata api",url,":",e)
+        }
+    }
+    const getStoresArea = async (token,area) =>{
+        const url = endpointOS+'/api/items?areaId='+area
+        let storeArea = []
+        try{
+            const response = await fetch(url,{
+                method:'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+token
+                }
+            })
+            if(!response.ok){
+                console.log("Errore",response.status)
+            }else{
+                const data = await response.json()
+                const itemsList = data.items.itemsList
+                const itemName = []
+                for(let item in itemsList){
+                    if(itemsList[item].deposito){
+                        storeArea.push(itemsList[item])
+                        itemName.push(itemsList[item].nome)
+                    }
+                }
+                setStores(storeArea)
+                setStoresName(itemName)
+            }
+        }catch(e){
+            console.log("Errore ",e)
+        }
+    }
+    useEffect(()=>{
+        fetchData()
+    },[])
+    useEffect(()=>{
+        const store = stores.find(({nome})=>nome===selectedStore)
+        console.log(store)
+        if(store){
+            setSubstance(store.substanceName)
+            setStartQuantity(""+store.quantity)
+            setUnit(store.unit)
+        }
+     },[selectedStore])
+    const handleUpdate = async () =>{
+        if((selectedStore===null || selectedStore==="") || (substance===null || substance==="") || (startQuantity==="" || startQuantity==="") || (unit===null || unit===""))
+            alert("Per favore seleziona un area!")
+        if(final===null || final==="")
+            alert("Seleziona la quantità finale!")
+        else{
+            const store = stores.find(({nome})=>nome===selectedStore)
+            store.quantity=final
+            const url = endpointOS+'/api/items/'+store.id
+            const token = await AsyncStorage.getItem("token")
+            try{
+                const response = await fetch(url,{
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer '+token
+                    },
+                    body: JSON.stringify(store)
+                })
+                if(!response.ok){
+                    console.log("Errore",response.status)
+                }else{
+                    const data = await response.json()
+                    if(data.result===0){
+                        alert("Aggiornamento quantità eseguito con suceesso!!")
+                        router.push("/")
+                    }
+                }
+            }catch(e){
+                console.log("Errore",url,":",e)
+            }
+        }
     }
     return(
         <View style={styles.container}>
             <Text style={styles.start}>Aggiorna deposito </Text>
             <View>
                 <Text style={styles.text}>{"\n"}Deposito {"\n"}</Text>
-                <SelectList data={stores} style={{width:500, height:500, marginVertical:10,}} boxStyles={{backgroundColor:'white'}} placeholder="Seleziona un deposito" value={selectedStore} setSelected={setSelectedStore} save='key'/>
+                <SelectList data={storesName} style={{width:500, height:500, marginVertical:10,}} boxStyles={{backgroundColor:'white'}} placeholder="Seleziona un deposito" value={selectedStore} setSelected={setSelectedStore} save='key'/>
                 <Text style={styles.text}>{"\n"}Sostanza {"\n"}</Text>
-                <SelectList data={substances} style={{width:500, height:500, marginVertical:10,}} boxStyles={{backgroundColor:'white'}} placeholder="Seleziona una sostanza" value={selectedSub} setSelected={setSelectedSub} save='key'/>
+                <TextInput style={styles.input} editable={false}  value={substance}/>
                 <Text style={styles.text}>{"\n"}  Quantità iniziale:</Text>
-                <TextInput style={styles.input} editable={false}  />
+                <TextInput style={styles.input} editable={false} value={startQuantity} />
                 <Text style={styles.text}>  Unità di misura</Text>
-                <TextInput style={styles.input} editable={false}  />
+                <TextInput style={styles.input} editable={false} value={unit} />
                 <Text style={styles.text}>{"\n"}  Quantità finale:</Text>
-                <TextInput style={styles.input}  />
+                <TextInput style={styles.input} keyboardType="number-pad" value={final} onChangeText={setFinal} />
                 <View style={styles.buttonlist}>
                     <TouchableOpacity style={styles.buttonlog} onPress={handleCancel} >
                         <Text style={styles.textbutton}>Annulla</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.buttonCreate}>
+                    <TouchableOpacity style={styles.buttonCreate} onPress={handleUpdate}>
                         <Text style={styles.textbutton}>Aggiorna </Text>
                     </TouchableOpacity>
                 </View>
