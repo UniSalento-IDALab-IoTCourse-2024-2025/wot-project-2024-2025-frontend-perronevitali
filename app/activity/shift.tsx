@@ -10,12 +10,17 @@ import { useRouter } from 'expo-router';
 import { API_BASE_URL,API_PORT_OS,API_PORT_US } from '@/constants/api';
 
 export default function ShiftScreen() {
+    const ACTION = "TRANSFER"
     const endpointOS = API_BASE_URL+API_PORT_OS
     const router = useRouter()
     const [areaNames,setAreaNames] = useState([])
     const [areas,setAreas] = useState([])
     const [items,setItems] = useState([])
-    const [selected,setSelected] = useState([])
+    const [selected,setSelected] = useState("")
+    const [itemsArea,setItemsArea] = useState([])
+    const [managedId,setManagedId] = useState("")
+    const [idArea,setIdArea] = useState("")
+    const [warning,setWarning] = useState("")
     const [selectedItem, setSelectedItem] = useState<number | null>(null);
     const fetchData = async () =>{
          const token = await AsyncStorage.getItem("token")
@@ -25,11 +30,8 @@ export default function ShiftScreen() {
     const getItems = async (token) =>{
         let url = endpointOS+'/api/items/'
         const area = JSON.parse(await AsyncStorage.getItem("managedId"))
-        if(area){
-            getItemsArea(token,area)
-        }else{
-            getAllItems(token,url)
-        }
+        setManagedId(area)
+        getAllItems(token,url)
     }
     const getAllItems = async (token,url) =>{
         try{
@@ -88,36 +90,76 @@ export default function ShiftScreen() {
             console.log("Errore ",url,":",e)
         }
     }
-    const getItemsArea = async (token,area) =>{
-        const url = endpointOS+'/api/items?areaId='+area
-        let itemArea = []
-        try{
-            const response = await fetch(url,{
-                headers: {
-                    'Content-Type': 'application/json',
-                     'Authorization': 'Bearer '+token
-                }
-                })
-                if(!response.ok){
-                    console.log("Errore",response.status)
-                }else{
-                    const data = await response.json()
-                    const itemsList = data.items.itemsList
-                    return itemsList
-                }
-            }catch(e){
-                console.log("Errore ",e)
-           }
-    }
     const handleCancel = () =>{
         router.push("/")
     }
     const handleProceed = async () =>{
-            router.replace("/user/listWorker")
+            if((selected===null || selected===""))
+                alert("Per favore seleziona un area!")
+            else if((selectedItem===null || selectedItem===""))
+                alert("Seleziona un item!")
+            else{
+                const areaChoise = areas.find(({name})=>name===selected)
+                const item = itemsArea.find(({id})=>id===selectedItem)
+                let destination = areaChoise.id
+                let origin = item.areaId
+                const bodyTask = {
+                    "operationType": ACTION,
+                    "itemId": selectedItem,
+                    "originAreaId": origin,
+                    "destinationAreaId": destination,
+                    "substanceCas": item.substanceCas,
+                    "substanceName": item.substanceName,
+                    "workerIds": []
+                }
+                await AsyncStorage.setItem("bodyTask",JSON.stringify(bodyTask))
+                router.replace("/user/listWorker")
+            }
     }
     useEffect(()=>{
         fetchData()
     },[])
+    const getItemsArea =  (area) =>{
+        let itemsArea = []
+        for(let item in items){
+            if(items[item].areaId===area){
+                itemsArea.push(items[item])
+           }
+        }
+        setItemsArea(itemsArea)
+    }
+    const getItemsFromOtherAreas =  (area) =>{
+        let itemsArea = []
+        for(let item in items){
+            if(items[item].areaId!==area){
+                itemsArea.push(items[item])
+            }
+        }
+        setItemsArea(itemsArea)
+    }
+    const getNameArea = (idArea) =>{
+        const areaChoise = areas.find(({id})=>id===idArea)
+        if(areaChoise)
+            return areaChoise.name
+
+    }
+    useEffect(()=>{
+        const areaChoise = areas.find(({name})=>name===selected)
+        if(areaChoise){
+            setIdArea(areaChoise.id)
+            if(managedId){
+                if(areaChoise.id===managedId){
+                    setWarning("D'ora in poi vedrai gli item di altre aree!")
+                    getItemsFromOtherAreas(areaChoise.id)
+                }else{
+                    setWarning("")
+                    getItemsArea(managedId)
+                }
+            }else{
+                getItemsFromOtherAreas(areaChoise.id)
+            }
+        }
+    },[selected])
     return (
         <View style={styles.container}>
             <ScrollView style={{backgroundColor:'#ffa420'}}>
@@ -127,12 +169,18 @@ export default function ShiftScreen() {
                 <SelectList data={areaNames}
                  boxStyles={{width: '70%',backgroundColor: 'white',marginLeft:5}} dropdownStyles={{ width: '70%', backgroundColor: 'white'}} placeholder="Seleziona un' area" value={selected} setSelected={setSelected} save='key'/>
             </View>
+             <Text style={styles.text}>{warning}</Text>
             <Divider style={{ backgroundColor: '#ccc', marginVertical: 10, width:320 }} />
-            {items?.map((item,key)=>
+            {itemsArea?.map((item,key)=>
                  <View style={styles.boxMessage} key={key}>
                     <Text style={styles.message}>Nome:<Text style={styles.infoText}>{item?.nome}</Text></Text>
                     <Text style={styles.message}>Sostanza:<Text style={styles.infoText}>{item?.substanceName} </Text></Text>
                     <Text style={styles.message}>Quantità:<Text style={styles.infoText}>{item?.quantity} {item?.unit}</Text></Text>
+                    {(!managedId ||  managedId===idArea) ? (
+                      <Text style={styles.message}>
+                        Area:<Text style={styles.infoText}>{getNameArea(item?.areaId)}</Text>
+                      </Text>
+                    ) : null}
                     <View style={styles.radioContainer}>
                         <RadioButton
                            value={String(item.id)}
@@ -331,7 +379,6 @@ const styles = StyleSheet.create({
   },
     boxMessage: {
       width: 340,
-      height: 90,
       marginTop: 10,
       marginBottom: 10,
       padding: 10,

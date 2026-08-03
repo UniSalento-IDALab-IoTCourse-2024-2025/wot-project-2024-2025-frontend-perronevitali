@@ -2,32 +2,168 @@ import { useState,useEffect,useRef } from 'react';
 import { View,Platform,ScrollView, Text, StyleSheet, TouchableOpacity,Button,Modal } from 'react-native';
 import { RadioButton } from 'react-native-paper';
 import { useRouter } from 'expo-router';
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL,API_PORT_OS,API_PORT_US } from '@/constants/api';
 export default function LoadItemScreen(){
-    const [selected,setSelected] = useState("")
+    const ACTION = "LOADING"
     const router = useRouter()
-
+    const endpointOS = API_BASE_URL + API_PORT_OS
+    const [items,setItems] = useState([])
+    const [managedId,setManagedId] = useState("")
+    const [areas,setAreas] = useState([])
+    const [selectedItem, setSelectedItem] = useState<number | null>(null);
+    const getItems = async () =>{
+        const token = await AsyncStorage.getItem("token")
+        const user = JSON.parse(await AsyncStorage.getItem("user"))
+        const area = JSON.parse(await AsyncStorage.getItem("managedId"))
+        setManagedId(area)
+        if(area){
+            getItemsArea(token,area)
+        }else{
+            getAllItems(token)
+            getAreas(token)
+        }
+    }
+    const getAllItems = async (token) =>{
+        const url = endpointOS+"/api/items/"
+        try{
+            const response = await fetch(url,{
+                method: 'GET',
+                headers:{
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+token
+                }
+            })
+            if(!response.ok){
+                console.log("Errore",response.status)
+            }else{
+                const data = await response.json()
+                const itemsList = data.items.itemsList
+                const items = []
+                for(let item in itemsList){
+                    if(!itemsList[item].deposito)
+                        items.push(itemsList[item])
+                }
+                setItems(items)
+            }
+        }catch(e){
+            console.log("Errore chiamata api",url,":",e)
+        }
+    }
+    const getItemsArea = async (token,area) =>{
+        const url = endpointOS+'/api/items?areaId='+area
+        let itemArea = []
+        try{
+            const response = await fetch(url,{
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+token
+                }
+            })
+            if(!response.ok){
+                console.log("Errore",response.status)
+            }else{
+                const data = await response.json()
+                const itemsList = data.items.itemsList
+                let items=[]
+                for(let item in itemsList){
+                    if(!itemsList[item].deposito)
+                        items.push(itemsList[item])
+                }
+                setItems(items)
+            }
+        }catch(e){
+            console.log("Errore ",e)
+        }
+    }
+    const getAreas = async (token) =>{
+        const url = endpointOS+'/api/areas/'
+        try{
+            const response = await fetch(url,{
+                method : 'GET',
+                headers:{
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+token
+                }
+            })
+            if(!response.ok){
+                console.log("Errore",response.status)
+            }else{
+                const data = await response.json()
+                const areas = data.areas.areasList
+                let areasobj = []
+                for(let area in areas){
+                    const name = areas[area].name
+                    const id = areas[area].id
+                    const bodyArea = {
+                        "id": id,
+                        "name": name
+                    }
+                    areasobj.push(bodyArea)
+                }
+                setAreas(areasobj)
+            }
+        }catch(e){
+            console.log("Errore ",url,":",e)
+        }
+    }
+    useEffect(()=>{
+        getItems()
+    },[])
+    const getNameArea = (idArea) =>{
+        const areaChoise = areas.find(({id})=>id===idArea)
+        if(areaChoise)
+            return areaChoise.name
+    }
     const handleCancel = async () =>{
         router.replace("/")
     }
     const handleProceed = async () =>{
-        router.replace("/user/listWorker")
+        if(!selectedItem)
+            alert("Seleziona almeno un item da caricare!")
+        else{
+            const item = items.find(({id})=>id===selectedItem)
+            const bodyTask = {
+                "operationType": ACTION,
+                "itemId": selectedItem,
+                "originAreaId": item.areaId,
+                "destinationAreaId": null,
+                "substanceCas": item.substanceCas,
+                "substanceName": item.substanceName,
+                "workerIds": []
+            }
+            console.log(JSON.stringify(bodyTask,'',2))
+            await AsyncStorage.setItem("bodyTask",JSON.stringify(bodyTask))
+            await AsyncStorage.setItem("typeLoading","item")
+            router.replace("/user/listWorker")
+        }
     }
 
     return(
         <View style={styles.container}>
+            <ScrollView style={{backgroundColor:'#ffa420'}}>
             <Text style={styles.start}>Carica Item</Text>
-            <View style={styles.boxMessage}>
-                <Text style={styles.message}>Item 1 </Text>
-                <View style={styles.radioContainer}>
-                    <RadioButton
-                        value="item"
-                        onCheck={()=>{setSelected(value)}}
-                        color="white"
-                        ncheckedColor="white"
-                    />
+            {items?.map((item,key)=>
+                <View style={styles.boxMessage} key={key}>
+                    <Text style={styles.message}>Nome:<Text style={styles.infoText}>{item?.nome}</Text></Text>
+                    <Text style={styles.message}>Sostanza:<Text style={styles.infoText}>{item?.substanceName} </Text></Text>
+                    <Text style={styles.message}>Quantità:<Text style={styles.infoText}>{item?.quantity} {item?.unit}</Text></Text>
+                    {!managedId ? (
+                        <Text style={styles.message}>
+                            Area:<Text style={styles.infoText}>{getNameArea(item?.areaId)}</Text>
+                        </Text>
+                    ) : null}
+                    <View style={styles.radioContainer}>
+                        <RadioButton
+                            value={String(item.id)}
+                            status={selectedItem === item.id ? 'checked' : 'unchecked'}
+                            onPress={() => setSelectedItem(item.id)}
+                            color="white"
+                            uncheckedColor="white"
+                        />
+                    </View>
                 </View>
-            </View>
+            )}
             <View style={styles.buttonlist}>
                 <TouchableOpacity style={styles.buttonlog} onPress={handleCancel}>
                     <Text style={styles.textbutton}>Annulla</Text>
@@ -36,6 +172,7 @@ export default function LoadItemScreen(){
                     <Text style={styles.textbutton}>Procedi</Text>
                 </TouchableOpacity>
             </View>
+            </ScrollView>
         </View>
     )
 }
@@ -81,7 +218,7 @@ const styles = StyleSheet.create({
         position: 'relative'
     },
   message:{
-      fontSize: 24,
+      fontSize: 18,
       fontWeight: 'bold',
       color: 'white'
   },
@@ -203,7 +340,7 @@ const styles = StyleSheet.create({
         right: 10,
     },
     infoText:{
-        fontSize: 24,
+        fontSize: 20,
         fontWeight: 'bold',
         alignItems: 'right',
         alignSelf: 'right',
@@ -211,18 +348,15 @@ const styles = StyleSheet.create({
     },
     boxMessage: {
           width: 340,
-          height: 90,
-          marginTop: 30,
-          marginBottom: 30,
+          marginTop: 10,
+          marginBottom: 10,
+          alignSelf: "center",
           padding: 10,
           backgroundColor: '#2c2e52',
           borderRadius: 10,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
       },
       message:{
-          fontSize: 24,
+          fontSize: 20,
           fontWeight: 'bold',
           color: 'white'
       },

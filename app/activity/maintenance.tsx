@@ -9,24 +9,45 @@ import { useRouter } from 'expo-router';
 import { API_BASE_URL,API_PORT_OS,API_PORT_US } from '@/constants/api';
 
 export default function MaintenanceScreen() {
+    const ACTION="MAINTENANCE"
     const router = useRouter()
     const endpointOS = API_BASE_URL+API_PORT_OS
     const [stores,setStores] = useState([])
+    const [managedId,setManagedId] = useState('')
+    const [areas,setAreas] = useState([])
     const [selectedItem, setSelectedItem] = useState<number | null>(null);
     const handleCancel = () =>{
         router.push("/")
     }
     const handleProceed = async () =>{
-        router.replace("/user/listWorker")
+        if(selectedItem===null || selectedItem==="")
+            alert("Seleziona un item!")
+        else{
+            const store = stores.find(({id})=>id===selectedItem)
+            const bodyTask = {
+                "operationType": ACTION,
+                "itemId": selectedItem,
+                "originAreaId": store.areaId,
+                "destinationAreaId": store.areaId,
+                "substanceCas": store.substanceCas,
+                "substanceName": store.substanceName,
+                "workerIds": []
+
+            }
+            await AsyncStorage.setItem("bodyTask",JSON.stringify(bodyTask))
+            router.replace("/user/listWorker")
+        }
     }
     const getStores = async () =>{
         const token = await AsyncStorage.getItem("token")
         const user = JSON.parse(await AsyncStorage.getItem("user"))
         const area = JSON.parse(await AsyncStorage.getItem("managedId"))
+        setManagedId(area)
         if(area){
             getStoresArea(token,area)
         }else{
             getAllStores(token)
+            getAreas(token)
         }
     }
 
@@ -55,31 +76,73 @@ export default function MaintenanceScreen() {
             }catch(e){
                 console.log("Errore chiamata api",url,":",e)
             }
-        }
-        const getStoresArea = async (token,area) =>{
-            const url = endpointOS+'/api/items?areaId='+area
-            let storeArea = []
-            try{
-                const response = await fetch(url,{
-                    headers: {
-                        'Content-Type': 'application/json',
-                         'Authorization': 'Bearer '+token
-                    }
-                })
-                if(!response.ok){
-                    console.log("Errore",response.status)
-                }else{
-                    const data = await response.json()
-                    const itemsList = data.items.itemsList
+    }
+    const getStoresArea = async (token,area) =>{
+        const url = endpointOS+'/api/items?areaId='+area
+        let storeArea = []
+        try{
+            const response = await fetch(url,{
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+token
                 }
-            }catch(e){
-                console.log("Errore ",e)
+            })
+            if(!response.ok){
+                console.log("Errore",response.status)
+            }else{
+                const data = await response.json()
+                const itemsList = data.items.itemsList
+                const items = []
+                for(let item in itemsList){
+                    if(itemsList[item].deposito)
+                        items.push(itemsList[item])
+                }
+                console.log(items)
+                setStores(items)
             }
-
+        }catch(e){
+            console.log("Errore ",e)
         }
+    }
+    const getAreas = async (token) =>{
+        const url = endpointOS+'/api/areas/'
+        try{
+            const response = await fetch(url,{
+                method : 'GET',
+                headers:{
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+token
+                }
+            })
+            if(!response.ok){
+                console.log("Errore",response.status)
+            }else{
+                const data = await response.json()
+                const areas = data.areas.areasList
+                let areasobj = []
+                for(let area in areas){
+                    const name = areas[area].name
+                    const id = areas[area].id
+                    const bodyArea = {
+                        "id": id,
+                        "name": name
+                    }
+                    areasobj.push(bodyArea)
+                }
+                setAreas(areasobj)
+            }
+        }catch(e){
+            console.log("Errore ",url,":",e)
+        }
+    }
     useEffect(()=>{
         getStores()
     },[])
+    const getNameArea = (idArea) =>{
+        const areaChoise = areas.find(({id})=>id===idArea)
+        if(areaChoise)
+            return areaChoise.name
+    }
     return (
         <View style={styles.container}>
             <ScrollView style={{backgroundColor:'#ffa420'}}>
@@ -89,6 +152,11 @@ export default function MaintenanceScreen() {
                     <Text style={styles.message}>Nome:<Text style={styles.infoText}>{store?.nome}</Text></Text>
                     <Text style={styles.message}>Sostanza:<Text style={styles.infoText}>{store?.substanceName} </Text></Text>
                     <Text style={styles.message}>Quantità:<Text style={styles.infoText}>{store?.quantity} {store?.unit}</Text></Text>
+                     {!managedId ? (
+                        <Text style={styles.message}>
+                            Area:<Text style={styles.infoText}>{getNameArea(store?.areaId)}</Text>
+                        </Text>
+                        ) : null}
                     <View style={styles.radioContainer}>
                      <RadioButton
                         value={String(store.id)}

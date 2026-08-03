@@ -4,41 +4,186 @@ import {Divider} from "react-native-elements";
 import {SelectList} from 'react-native-dropdown-select-list';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL,API_PORT_OS,API_PORT_US } from '@/constants/api';
 
 export default function UnloadItemScreen(){
+    const ACTION = "UNLOADING"
     const [type,setType] = useState(null)
-    const data = ["area1","area2","area3"]
     const router = useRouter()
-    const substances = ["sub1","sub2","sub3"]
-    const [selected,setSelected] = useState(null)
+    const [areaNames,setAreaNames] = useState([])
+    const [areas,setAreas] = useState([])
+    const [substances,setSubstances] = useState([])
+    const [substancesName,setSubstancesName] = useState([])
+    const [selectedSub,setSelectedSub] = useState(null)
+    const [selectedArea,setSelectedArea] = useState(null)
+    const [nameUn,setNameUn] = useState(null)
+    const [unit,setUnit] = useState("")
+    const [quantity,setQuantity] = useState("")
+    const endpointOS = API_BASE_URL+API_PORT_OS
+    const fetchData = async () =>{
+        //getItem()
+        getSubstances()
+        const managed = JSON.parse(await AsyncStorage.getItem("managedId"))
+        if(managed){
+            const area =await getArea(managed)
+            const body={
+                "id": area.id,
+                "name": area.name
+            }
+            setAreas([body])
+            setAreaNames([area.name])
+        }
+        else
+            getAreas()
+    }
+    const getArea = async (managed) =>{
+        const token =  await AsyncStorage.getItem("token")
+        const url = endpointOS+'/api/areas/'+managed
+        try{
+            const response = await fetch(url,{
+                method: 'GET',
+                headers:{
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+token
+                }
+            })
+            if(!response.ok){
+                console.log("Errore /api/areas/"+managed,response.status)
+                return null
+            }else{
+                const data = await response.json()
+                if(data.result===0){
+                    const area = data.areas.areasList[0]
+                    return area
+                }else{
+                    return null
+                }
+            }
+        }catch(e){
+            console.log("Errore chiamata  API /api/areas/:"+managed,e)
+            return null
+        }
+    }
 
-    const getItem = async () =>{
-        const typeItem = await AsyncStorage.getItem("typeItem")
-        setType(typeItem)
+    const getAreas = async () =>{
+        const token =  await AsyncStorage.getItem("token")
+        const url = endpointOS+'/api/areas/'
+        try{
+            const response = await fetch(url,{
+                method : 'GET',
+                headers:{
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+token
+                }
+            })
+            if(!response.ok){
+                console.log("Errore",response.status)
+            }else{
+                const data = await response.json()
+                const areas = data.areas.areasList
+                let names = []
+                let areasobj = []
+                for(let area in areas){
+                    const name = areas[area].name
+                    const id = areas[area].id
+                    const bodyArea = {
+                        "id": id,
+                        "name": name
+                    }
+                    names.push(name)
+                    areasobj.push(bodyArea)
+                }
+                setAreaNames(names)
+                setAreas(areasobj)
+            }
+        }catch(e){
+            console.log("Errore ",url,":",e)
+        }
+    }
+    const getSubstances = async () =>{
+        const token = await AsyncStorage.getItem("token")
+        const url =  endpointOS+'/api/substances/'
+        try{
+            const response = await fetch(url,{
+                method: 'GET',
+                headers:{
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+token
+                }
+            })
+            if(!response.ok){
+                console.log("Errore",response.status)
+            }else{
+                const data = await response.json()
+                const substances = data.substances.substancesList
+                const names = []
+                const subobj = []
+                for(let sub in substances){
+                    names.push(substances[sub].nomeIt)
+                    const bodyObj = {
+                        "cas": substances[sub].casNumber,
+                        "nome": substances[sub].nomeIt,
+                    }
+                    subobj.push(bodyObj)
+                }
+                setSubstances(subobj)
+                setSubstancesName(names)
+            }
+        }catch(e){
+            console.log("Errore chiamta API",url,":",e)
+        }
     }
     useEffect(()=>{
-        getItem()
+        fetchData()
     },[])
+
     const handleCancel = async () =>{
         router.push("/")
     }
     const handleProceed = async () =>{
-        router.replace("/user/listWorker")
+        if((nameUn===null || nameUn==="") || (selectedSub===null || selectedSub==="") || (selectedArea===null || selectedArea==="") || (quantity===null || quantity==="") || (unit===null || unit===""))
+            alert("Per favore tutti compila i campi!")
+        else{
+            const areaChoise = areas.find(({name})=>name===selectedArea)
+            const subChoise = substances.find(({nome})=>nome===selectedSub)
+            const bodyItem ={
+                "substanceCas": subChoise.cas,
+                "substancesName": subChoise.nome,
+                "nome": nameUn,
+                "quantity": quantity,
+                "unit": unit,
+                "deposito": false,
+                "areaId": areaChoise.id
+            }
+            const bodyTask = {
+                "operationType": ACTION,
+                "itemId": null,
+                "originAreaId": null,
+                "destinationAreaId": areaChoise.id,
+                "substanceCas": subChoise.cas,
+                "substanceName": subChoise.nome,
+                "workerIds": []
+            }
+            await AsyncStorage.setItem("bodyTask",JSON.stringify(bodyTask))
+            await AsyncStorage.setItem("typeUnloading","item")
+            await AsyncStorage.setItem("bodyItem",JSON.stringify(bodyItem))
+            router.replace("/user/listWorker")
+        }
     }
     return(
         <View style={styles.container}>
             <Text style={styles.start}>Scarica Item </Text>
             <View>
                 <Text style={styles.text}>  Nome</Text>
-                <TextInput  style={styles.input} />
+                <TextInput  style={styles.input} value={nameUn} onChangeText={setNameUn}/>
                 <Text style={styles.text}>  Sostanza</Text>
-                <SelectList data={substances} style={{width:500, height:500, marginVertical:10}} boxStyles={{backgroundColor:'white'}} placeholder="Seleziona una sostanza" value={selected} setSelected={setSelected} save='key'/>
+                <SelectList data={substancesName} style={{width:500, height:500, marginVertical:10}} boxStyles={{backgroundColor:'white'}} placeholder="Seleziona una sostanza" value={selectedSub} setSelected={setSelectedSub} save='key'/>
                 <Text style={styles.text}>  Quantità</Text>
-                <TextInput style={styles.input}  />
+                <TextInput style={styles.input} value={quantity} onChangeText={setQuantity} keyboardType="number-pad" />
                 <Text style={styles.text}>  Unità di misura</Text>
-                <TextInput style={styles.input}  />
+                <TextInput style={styles.input}  value={unit} onChangeText={setUnit}/>
                 <Text style={styles.text}>  Area di arrivo</Text>
-                <SelectList data={data} style={{width:500, height:500, marginVertical:10}} boxStyles={{backgroundColor:'white'}} placeholder="Seleziona un' area" value={selected} setSelected={setSelected} save='key'/>
+                <SelectList data={areaNames} style={{width:500, height:500, marginVertical:10}} boxStyles={{backgroundColor:'white'}} placeholder="Seleziona un' area" value={selectedArea} setSelected={setSelectedArea} save='key'/>
                 <View style={styles.buttonlist}>
                     <TouchableOpacity style={styles.buttonlog} onPress={handleCancel}>
                         <Text style={styles.textbutton}>Annulla</Text>

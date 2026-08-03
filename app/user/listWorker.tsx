@@ -8,6 +8,7 @@ import Checkbox from 'expo-checkbox';
 export default function ListWorker(){
     const router = useRouter()
     const endpointUS = API_BASE_URL+API_PORT_US
+    const endpointOS = API_BASE_URL+API_PORT_OS
     const [workers,setWorkers] = useState([])
     const [selectedWorkers, setSelectedWorkers] = useState<number[]>([])
     const toggleWorker = (id: number) => {
@@ -19,6 +20,78 @@ export default function ListWorker(){
     }
     const handleCancel = () =>{
         router.replace("/")
+    }
+    const addNewTask = async (token,bodyTask) => {
+        const url = endpointOS+'/api/tasks/evaluate'
+        try{
+            const response = await fetch(url,{
+                method: 'POST',
+                headers:{
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+token
+                },
+                body: JSON.stringify(bodyTask)
+            })
+            if(!response.ok){
+                console.log("Errore",response.status)
+            }else{
+                const data = await response.json()
+                if(data.result===0){
+                  alert(data.message)
+                  router.replace("/")
+                }
+
+            }
+        }catch(e){
+            console.log("Errore",e)
+        }
+    }
+    const  addNewItem = async (token,body) =>{
+        const url = endpointOS+'/api/items/'
+        try{
+            const response = await fetch(url,{
+                 method: 'POST',
+                 headers:{
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+token
+                 },
+                 body: JSON.stringify(body)
+            })
+            if(!response.ok){
+                console.log("Errore",response.status)
+                return null
+            }else{
+                const data = await response.json()
+                const newItem = data.item
+                if(data.result===0){
+                    alert("Item creato con successo!")
+                }
+                return newItem
+            }
+        }catch(e){
+            console.log("Errore",e)
+            return null
+        }
+    }
+    const handleCreateTask = async () => {
+         const token = await AsyncStorage.getItem("token")
+        if(selectedWorkers.length===0)
+            alert("Seleziona almeno un lavoratore!")
+        else{
+            let body = JSON.parse(await AsyncStorage.getItem("bodyTask"))
+            console.log(JSON.stringify(body,'',2))
+            body.workerIds = selectedWorkers
+            const operationType = body.operationType
+            if(operationType==="UNLOADING"){
+                const typeUnloading = await AsyncStorage.getItem("typeUnloading")
+                if(typeUnloading==="item"){
+                    const bodyItem = JSON.parse(await AsyncStorage.getItem("bodyItem"))
+                    const response = await addNewItem(token,bodyItem)
+                    body.itemId = response.id
+               }
+            }
+            addNewTask(token,body)
+        }
     }
     const getUsers = async () =>{
         const token =  await AsyncStorage.getItem("token")
@@ -65,7 +138,7 @@ export default function ListWorker(){
                     <TouchableOpacity style={styles.buttonlog} onPress={handleCancel}>
                         <Text style={styles.textbutton}>Annulla</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.buttonCreate}>
+                    <TouchableOpacity style={styles.buttonCreate} onPress={handleCreateTask}>
                         <Text style={styles.textbutton}>Crea Task</Text>
                     </TouchableOpacity>
                 </View>

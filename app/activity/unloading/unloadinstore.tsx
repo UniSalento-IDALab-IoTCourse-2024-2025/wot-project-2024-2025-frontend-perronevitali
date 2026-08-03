@@ -7,31 +7,108 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL,API_PORT_OS,API_PORT_US } from '@/constants/api';
 
 export default function UnloadInStoreScreen(){
-
+    const ACTION = "UNLOADING"
     const router = useRouter()
     const endpointOS = API_BASE_URL+API_PORT_OS
+    const [managed,setManaged] = useState("")
     const [areasName,setAreaNames] = useState([])
     const [areas,setAreas] = useState([])
     const [storesName,setStoreName] = useState([])
     const [stores,setStores] = useState([])
     const [start,setStart] = useState("")
     const [store,setStore] = useState("")
+    const [selectableStores,setSelecatable] = useState([])
+    const [selectableNames,setSelecatableNames] = useState([])
+    const [quantity,setQuantity] = useState("")
     const fetchData = async () =>{
-        const areas = JSON.parse(await AsyncStorage.getItem("managedIds"))
-        const token = await AsyncStorage.getItem("token")
-        if(areas[0]){
-            for(let area in areas){
-
+        getStores()
+        const managed = JSON.parse(await AsyncStorage.getItem("managedId"))
+        setManaged(managed)
+        if(managed){
+            const area =await getArea(managed)
+            const body={
+                "id": area.id,
+                "name": area.name
             }
-
+            setAreas([body])
+            setAreaNames([area.name])
+        }else
+            getAreas()
+    }
+    const getStores = async () =>{
+        const token = await AsyncStorage.getItem("token")
+        const user = JSON.parse(await AsyncStorage.getItem("user"))
+        const area = JSON.parse(await AsyncStorage.getItem("managedId"))
+        if(area){
+            getStoresArea(token,area)
         }else{
-            getAllAreas(token)
-            getAllItems(token)
+            getAllStores(token)
         }
     }
-    const getAllAreas = async (token) =>{
-        const url = endpointOS+'/api/areas/'
+    const getStoresArea = async (token,area) =>{
+        const url = endpointOS+'/api/items?areaId='+area
+        let itemArea = []
+        try{
+            const response = await fetch(url,{
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+token
+                }
+            })
+            if(!response.ok){
+                console.log("Errore",response.status)
+            }else{
+                const data = await response.json()
+                const itemsList = data.items.itemsList
+                let items=[]
+                let names=[]
+                for(let item in itemsList){
+                    if(itemsList[item].deposito){
+                        items.push(itemsList[item])
+                        names.push(itemsList[item].nome)
+                    }
+                }
+                setStores(items)
+                //setSelecatable(items)
+                setStoreName(names)
+                //setSelecatableNames(names)
+            }
+        }catch(e){
+            console.log("Errore ",e)
+        }
+    }
+    const getArea = async (managed) =>{
+        const token =  await AsyncStorage.getItem("token")
+        const url = endpointOS+'/api/areas/'+managed
+        try{
+            const response = await fetch(url,{
+                method: 'GET',
+                headers:{
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+token
+                }
+            })
+            if(!response.ok){
+                console.log("Errore /api/areas/"+managed,response.status)
+                return null
+            }else{
+                const data = await response.json()
+                if(data.result===0){
+                    const area = data.areas.areasList[0]
+                    return area
+                }else{
+                    return null
+                }
+            }
+        }catch(e){
+            console.log("Errore chiamata  API /api/areas/:"+managed,e)
+            return null
+        }
+    }
 
+    const getAreas = async () =>{
+        const token =  await AsyncStorage.getItem("token")
+        const url = endpointOS+'/api/areas/'
         try{
             const response = await fetch(url,{
                 method : 'GET',
@@ -57,14 +134,14 @@ export default function UnloadInStoreScreen(){
                     names.push(name)
                     areasobj.push(bodyArea)
                 }
-            setAreaNames(names)
-            setAreas(areasobj)
+                setAreaNames(names)
+                setAreas(areasobj)
             }
         }catch(e){
             console.log("Errore ",url,":",e)
         }
     }
-    const getAllItems = async (token) =>{
+    const getAllStores = async (token) =>{
         const url = endpointOS+'/api/items/'
         try{
             const response = await fetch(url,{
@@ -79,17 +156,12 @@ export default function UnloadInStoreScreen(){
             }else{
                 const data = await response.json()
                 const itemsList = data.items.itemsList
-                console.log(JSON.stringify(itemsList[0],'',2))
                 let stores = []
                 let storesName = []
                 for(let item in itemsList){
                     if(itemsList[item].deposito){
-                        const bodyStore = {
-                            "id": itemsList[item].id,
-                            "name": itemsList[item].nome
-                        }
                         storesName.push(itemsList[item].nome)
-                        stores.push(bodyStore)
+                        stores.push(itemsList[item])
                     }
                 }
                 setStores(stores)
@@ -102,11 +174,42 @@ export default function UnloadInStoreScreen(){
     useEffect(()=>{
         fetchData()
     },[])
+    useEffect(()=>{
+        const areaChoise = areas.find(({name})=>name===start)
+        let newstores=[]
+        let names=[]
+        for(let store in stores){
+            if(areaChoise.id===stores[store].areaId){
+                newstores.push(stores[store])
+                names.push(stores[store].nome)
+            }
+        }
+        setSelecatable(newstores)
+        setSelecatableNames(names)
+    },[start])
     const handleCancel = () =>{
         router.replace("/")
     }
     const handleProceed = async () =>{
-        router.replace("/user/listWorker")
+        if((start===null || start==="") || (store===null || store==="") || (quantity===null || quantity===""))
+            alert("Per favore compila tutti i campi!")
+        else{
+            const areaChoise = areas.find(({name})=>name===start)
+            const store = selectableStores.find(({name})=>name===store)
+            const bodyTask = {
+                "operationType": ACTION,
+                "itemId": store.id,
+                "originAreaId": null,
+                "destinationAreaId": store.areaId,
+                "substanceCas": store.substanceCas,
+                "substanceName": store.substanceName,
+                "workerIds": [],
+                "substanceQuantity": quantity
+            }
+            await AsyncStorage.setItem("typeUnloading","store")
+            await AsyncStorage.setItem("bodyTask",JSON.stringify(bodyTask))
+            router.replace("/user/listWorker")
+        }
     }
     return(
         <View style={styles.container}>
@@ -115,9 +218,9 @@ export default function UnloadInStoreScreen(){
                 <Text style={styles.text}> Area di partenza</Text>
                 <SelectList data={areasName} style={{width:500, height:500, marginVertical:10}} boxStyles={{backgroundColor:'white'}} placeholder="Seleziona un' area" value={start} setSelected={setStart} save='key'/>
                 <Text style={styles.text}> Deposito</Text>
-                <SelectList data={storesName} style={{width:500, height:500, marginVertical:10}} boxStyles={{backgroundColor:'white'}} placeholder="Seleziona un deposito" value={store} setSelected={setStore} save='key'/>
+                <SelectList data={selectableNames} style={{width:500, height:500, marginVertical:10}} boxStyles={{backgroundColor:'white'}} placeholder="Seleziona un deposito" value={store} setSelected={setStore} save='key'/>
                 <Text style={styles.text}> Quantità</Text>
-                <TextInput style={styles.input}  />
+                <TextInput style={styles.input} value={quantity} onChangeText={setQuantity} keyboardType="number-pad" />
             </View>
             <View style={styles.buttonlist}>
                 <TouchableOpacity style={styles.buttonlog} onPress={handleCancel}>

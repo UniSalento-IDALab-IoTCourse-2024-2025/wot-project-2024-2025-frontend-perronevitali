@@ -2,30 +2,169 @@ import { useState,useEffect,useRef } from 'react';
 import { View,Platform,ScrollView, Text, StyleSheet, TouchableOpacity,Button,Modal } from 'react-native';
 import { RadioButton } from 'react-native-paper';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL,API_PORT_OS,API_PORT_US } from '@/constants/api';
 
 export default function LoadInStoreScreen(){
-    const [selected,setSelected]= useState("")
+    const ACTION = "LOADING"
     const router = useRouter()
+    const endpointOS = API_BASE_URL+API_PORT_OS
+    const [stores,setStores] = useState([])
+    const [areas,setAreas] = useState([])
+    const [managedId,setManagedId] = useState([])
+    const [selectedItem, setSelectedItem] = useState<number | null>(null);
+    const getStores = async () =>{
+        const token = await AsyncStorage.getItem("token")
+        const user = JSON.parse(await AsyncStorage.getItem("user"))
+        const area = JSON.parse(await AsyncStorage.getItem("managedId"))
+        setManagedId(area)
+        if(area){
+            getStoresArea(token,area)
+        }else{
+            getAllStores(token)
+            getAreas(token)
+        }
+    }
+     const getAreas = async (token) =>{
+        const url = endpointOS+'/api/areas/'
+        try{
+            const response = await fetch(url,{
+                method : 'GET',
+                headers:{
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+token
+                }
+            })
+            if(!response.ok){
+                console.log("Errore",response.status)
+            }else{
+                const data = await response.json()
+                const areas = data.areas.areasList
+                let names = []
+                let areasobj = []
+                for(let area in areas){
+                    const name = areas[area].name
+                    const id = areas[area].id
+                    const bodyArea = {
+                        "id": id,
+                        "name": name
+                    }
+                    names.push(name)
+                    areasobj.push(bodyArea)
+                }
+                setAreas(areasobj)
+            }
+        }catch(e){
+         console.log("Errore ",url,":",e)
+        }
+    }
+    const getAllStores = async (token) =>{
+        const url = endpointOS+"/api/items/"
+        try{
+            const response = await fetch(url,{
+                method: 'GET',
+                headers:{
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+token
+                }
+            })
+            if(!response.ok){
+                console.log("Errore",response.status)
+            }else{
+                const data = await response.json()
+                const itemsList = data.items.itemsList
+                const stores = []
+                for(let store in itemsList){
+                    if(itemsList[store].deposito)
+                        stores.push(itemsList[store])
+                }
+                setStores(stores)
+            }
+        }catch(e){
+            console.log("Errore chiamata api",url,":",e)
+        }
+    }
+    const getStoresArea = async (token,area) =>{
+        const url = endpointOS+'/api/items?areaId='+area
+        let storeArea = []
+        try{
+            const response = await fetch(url,{
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+token
+                }
+            })
+            if(!response.ok){
+                console.log("Errore",response.status)
+            }else{
+                const data = await response.json()
+                const itemsList = data.items.itemsList
+                const items = []
+                for(let item in itemsList){
+                    if(itemsList[item].deposito)
+                        items.push(itemsList[item])
+                }
+                setStores(items)
+            }
+        }catch(e){
+            console.log("Errore ",e)
+        }
+    }
+    useEffect(()=>{
+        getStores()
+    },[])
+    const getNameArea = (idArea) =>{
+        const areaChoise = areas.find(({id})=>id===idArea)
+        if(areaChoise)
+            return areaChoise.name
+    }
     const handleCancel = async () =>{
         router.replace("/")
     }
     const handleProceed = async () =>{
-            router.replace("/user/listWorker")
+            if(!selectedItem)
+                alert("Seleziona almeno un item!")
+            else{
+                const store = stores.find(({id})=>id===selectedItem)
+                const bodyTask = {
+                    "operationType": ACTION,
+                    "itemId": selectedItem,
+                    "originAreaId": store.areaId,
+                    "destinationAreaId": null,
+                    "substanceCas": store.substanceCas,
+                    "substanceName": store.substanceName,
+                    "workerIds": []
+                }
+                await AsyncStorage.setItem("bodyTask",JSON.stringify(bodyTask))
+                await AsyncStorage.setItem("typeLoading","store")
+                router.replace("/user/listWorker")
+            }
     }
     return(
         <View style={styles.container}>
+            <ScrollView style={{backgroundColor:'#ffa420'}}>
             <Text style={styles.start}>Carica in un deposito</Text>
-            <View style={styles.boxMessage}>
-                <Text style={styles.message}>Deposito 1 </Text>
-                <View style={styles.radioContainer}>
-                    <RadioButton
-                        value="deposito"
-                        onCheck={()=>{setSelected(value)}}
-                        color="white"
-                        uncheckedColor="white"
-                    />
+            {stores.map((store,key)=>
+                <View style={styles.boxMessage} key={key}>
+                    <Text style={styles.message}>Nome:<Text style={styles.infoText}>{store?.nome}</Text></Text>
+                    <Text style={styles.message}>Sostanza:<Text style={styles.infoText}>{store?.substanceName} </Text></Text>
+                    <Text style={styles.message}>Quantità:<Text style={styles.infoText}>{store?.quantity} {store?.unit}</Text></Text>
+                    {!managedId ? (
+                        <Text style={styles.message}>
+                            Area:<Text style={styles.infoText}>{getNameArea(store?.areaId)}</Text>
+                        </Text>
+                    ) : null}
+                    <View style={styles.radioContainer}>
+                        <RadioButton
+                            value={String(store.id)}
+                            status={selectedItem === store.id ? 'checked' : 'unchecked'}
+                            onPress={() => setSelectedItem(store.id)}
+                            color="white"
+                            uncheckedColor="white"
+                        />
+                    </View>
                 </View>
-            </View>
+            )}
             <View style={styles.buttonlist}>
                 <TouchableOpacity style={styles.buttonlog} onPress={handleCancel}>
                     <Text style={styles.textbutton}>Annulla</Text>
@@ -34,6 +173,7 @@ export default function LoadInStoreScreen(){
                     <Text style={styles.textbutton}>Procedi</Text>
                 </TouchableOpacity>
             </View>
+            </ScrollView>
         </View>
     )
 }
@@ -80,7 +220,7 @@ const styles = StyleSheet.create({
         position: 'relative'
     },
   message:{
-      fontSize: 24,
+      fontSize: 18,
       fontWeight: 'bold',
       color: 'white'
   },
@@ -202,7 +342,7 @@ const styles = StyleSheet.create({
         right: 10,
     },
     infoText:{
-        fontSize: 24,
+        fontSize: 20,
         fontWeight: 'bold',
         alignItems: 'right',
         alignSelf: 'right',
@@ -210,18 +350,15 @@ const styles = StyleSheet.create({
     },
     boxMessage: {
           width: 340,
-          height: 90,
-          marginTop: 30,
-          marginBottom: 30,
+          marginTop: 10,
+          marginBottom: 10,
+          alignSelf:"center",
           padding: 10,
           backgroundColor: '#2c2e52',
           borderRadius: 10,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
       },
       message:{
-          fontSize: 24,
+          fontSize: 20,
           fontWeight: 'bold',
           color: 'white'
       },

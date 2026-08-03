@@ -9,19 +9,23 @@ import { useRouter } from 'expo-router';
 import { API_BASE_URL,API_PORT_OS,API_PORT_US } from '@/constants/api';
 
 export default function InspectionScreen() {
-
+    const ACTION = "INSPECTION"
     const router = useRouter()
     const endpointOS = API_BASE_URL + API_PORT_OS
     const [items,setItems] = useState([])
+    const [managedId,setManagedId] = useState('')
+    const [areas,setAreas] = useState([])
     const [selectedItem, setSelectedItem] = useState<number | null>(null);
     const getItems = async () =>{
         const token = await AsyncStorage.getItem("token")
         const user = JSON.parse(await AsyncStorage.getItem("user"))
         const area = JSON.parse(await AsyncStorage.getItem("managedId"))
+        setManagedId(area)
         if(area){
             getItemsArea(token,area)
         }else{
             getAllItems(token)
+            getAreas(token)
         }
     }
     const getAllItems = async (token) =>{
@@ -65,20 +69,75 @@ export default function InspectionScreen() {
             }else{
                 const data = await response.json()
                 const itemsList = data.items.itemsList
-                return itemsList
+                let items=[]
+                for(let item in itemsList){
+                    if(!itemsList[item].deposito)
+                        items.push(itemsList[item])
+                }
+                setItems(items)
             }
         }catch(e){
             console.log("Errore ",e)
        }
     }
+    const getAreas = async (token) =>{
+        const url = endpointOS+'/api/areas/'
+        try{
+            const response = await fetch(url,{
+                method : 'GET',
+                headers:{
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+token
+                }
+            })
+            if(!response.ok){
+                console.log("Errore",response.status)
+            }else{
+                const data = await response.json()
+                const areas = data.areas.areasList
+                let areasobj = []
+                for(let area in areas){
+                    const name = areas[area].name
+                    const id = areas[area].id
+                    const bodyArea = {
+                        "id": id,
+                        "name": name
+                    }
+                    areasobj.push(bodyArea)
+                }
+                setAreas(areasobj)
+            }
+        }catch(e){
+            console.log("Errore ",url,":",e)
+        }
+    }
     useEffect(()=>{
         getItems()
     },[])
+    const getNameArea = (idArea) =>{
+        const areaChoise = areas.find(({id})=>id===idArea)
+        if(areaChoise)
+            return areaChoise.name
+    }
     const handleCancel = () =>{
         router.push("/")
     }
     const handleProceed = async () =>{
-        router.replace("/user/listWorker")
+        if(selectedItem===null || selectedItem==="")
+            alert("Seleziona almeno un item!")
+        else{
+            const item = items.find(({id})=>id===selectedItem)
+            const bodyTask = {
+                "operationType": ACTION,
+                "itemId": selectedItem,
+                "originAreaId": item.areaId,
+                "substanceCas": item.substanceCas,
+                "substanceName": item.substanceName,
+                "workerIds": []
+            }
+            await AsyncStorage.setItem("bodyTask",JSON.stringify(bodyTask))
+            router.replace("/user/listWorker")
+        }
     }
     return (
         <View style={styles.container}>
@@ -88,7 +147,12 @@ export default function InspectionScreen() {
                 <View style={styles.boxMessage} key={key}>
                     <Text style={styles.message}>Nome:<Text style={styles.infoText}>{item?.nome}</Text></Text>
                     <Text style={styles.message}>Sostanza:<Text style={styles.infoText}>{item?.substanceName} </Text></Text>
-                     <Text style={styles.message}>Quantità:<Text style={styles.infoText}>{item?.quantity} {item?.unit}</Text></Text>
+                    <Text style={styles.message}>Quantità:<Text style={styles.infoText}>{item?.quantity} {item?.unit}</Text></Text>
+                    {!managedId ? (
+                        <Text style={styles.message}>
+                            Area:<Text style={styles.infoText}>{getNameArea(item?.areaId)}</Text>
+                        </Text>
+                    ) : null}
                     <View style={styles.radioContainer}>
                         <RadioButton
                             value={String(item.id)}
