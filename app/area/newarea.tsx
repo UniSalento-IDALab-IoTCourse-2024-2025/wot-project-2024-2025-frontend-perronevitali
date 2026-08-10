@@ -19,6 +19,7 @@ export default function NewArea(){
     const [ip2,setIp2] = useState(0)
     const [ip3,setIp3] = useState(0)
     const [ip4,setIp4] = useState(0)
+    const [port,setPort] = useState(0)
     const [temperature,setTemperature] = useState(0)
     const [humidity,setHumidity] = useState(0)
     const [danger,setDanger] = useState(0)
@@ -29,6 +30,10 @@ export default function NewArea(){
         const token = await AsyncStorage.getItem("token")
         const ipAddress = ip1+"."+ip2+"."+ip3+"."+ip4
         const macAddress = mac1+":"+mac2+":"+mac3+":"+mac4+":"+mac5+":"+mac6
+        console.log(ipAddress,macAddress)
+        if(ipAddress==="0.0.0.0" || macAddress===":::::" || (name==="" || name===null) || (port===0) || (temperature===0) || (humidity===0) ||(danger===0)){
+            alert("Inserisci i dati")
+        }
         const url = endpointOS+"/api/areas/"
         const body = {
             "name": name,
@@ -36,7 +41,8 @@ export default function NewArea(){
             "thresholdTemperature": temperature,
             "thresholdHumidity": humidity,
             "dangerIndexThreshold": danger,
-            "ipRaspberry": ipAddress
+            "ipRaspberry": ipAddress,
+            "raspberryPort": port
         }
         console.log(body)
         try{
@@ -113,6 +119,8 @@ export default function NewArea(){
                     </View>
                  </View>
                 </View>
+                <Text style={styles.text}>  Porta</Text>
+                <TextInput  style={styles.input} keyboardType="number-pad" value={port} onChangeText={setPort}/>
                 <Text style={styles.text}>  Soglia temperatura</Text>
                 <TextInput  style={styles.input} keyboardType="number-pad" value={temperature} onChangeText={setTemperature}/>
                 <Text style={styles.text}>  Soglia umidità</Text>

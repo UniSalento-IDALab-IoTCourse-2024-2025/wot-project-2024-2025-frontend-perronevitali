@@ -1,5 +1,5 @@
 import { useState,useEffect } from 'react';
-import { Platform, Text, StyleSheet, TouchableOpacity,View,ScrollView,Modal} from 'react-native';
+import { Platform, Text, StyleSheet, TouchableOpacity,View,ScrollView,Modal,Button} from 'react-native';
 import {Divider} from "react-native-elements";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL,API_PORT_OS,API_PORT_US } from '@/constants/api';
@@ -8,6 +8,7 @@ export default function WorksScreen() {
 
     const url = API_BASE_URL
     const [works,setWorks] = useState([])
+    const [selectedWork,setSelectedWork] = useState(null)
     const getWorks = async () =>{
         const token = await AsyncStorage.getItem("token")
         const endpoint = url + API_PORT_OS + '/api/tasks/mine'
@@ -25,9 +26,11 @@ export default function WorksScreen() {
             }else{
                 const data = await response.json()
                 let tasks = data.tasks.tasksList
-                tasks.push({"name":"ciao","timestamp":"timestamp"})
-                tasks.push({"name":"ciao2","timestamp":"timestamp2"})
-                tasks.push({"name":"ciao3","timestamp":"timestamp3"})
+                console.log("Le task:",tasks)
+                //onsole.log( JSON.stringify(data,'',2) )
+                //tasks.push({"name":"ciao","timestamp":"timestamp"})
+                //tasks.push({"name":"ciao2","timestamp":"timestamp2"})
+                //tasks.push({"name":"ciao3","timestamp":"timestamp3"})
                 setWorks(tasks)
             }
         }catch(e){
@@ -39,11 +42,44 @@ export default function WorksScreen() {
     },[])
 
     const [isModalVisible,setModalVisible] = useState(false);
-        const openModal = () =>{
+        const openModal = (work) =>{
+            setSelectedWork(work)
             setModalVisible(true)
         }
         const closeModal = () =>{
             setModalVisible(false)
+        }
+    const getDate = (timestamp) =>{
+            const date = new Date(timestamp)
+            return date.toLocaleDateString("it-IT")
+        }
+        const getHour = (timestamp) =>{
+            const date = new Date(timestamp)
+            return date.toLocaleTimeString("it-IT")
+        }
+        const getType = (type) =>{
+            switch(type){
+                case "LOADING": return "CARICO"
+                case "UNLOADING": return "SCARICO"
+                case "INSPECTION": return "ISPEZIONE"
+                case "MAINTENANCE": return "MANUTENZIONE"
+                case "TRANSFER": return "SPOSTAMENTO"
+            }
+        }
+        const getRisk=(risk)=>{
+            if(risk<=10){
+                return "BASSO"
+            }else if(risk>10 && risk<=29){
+                    return "MEDIO"
+            }else{
+                return "ALTO"
+            }
+        }
+        const getMLVerditct=(ml)=>{
+            if(ml==="APPROVED")
+                return "SICURO"
+            else
+                return "NON SICURO"
         }
     const cancelWork = () =>{
         console.log("Ho deciso di annullare il compito")
@@ -51,41 +87,53 @@ export default function WorksScreen() {
     const executeWork = () =>{
         console.log("Ho deciso di eseguire il compito")
     }
+
     return (
-        <ScrollView style={{backgroundColor:'#ffa420'}}>
-            <Text style={styles.start}>Compiti da svolgere</Text>
-                {works?.map((work,key)=><View style={styles.container} key={key}>
-                    <TouchableOpacity style={styles.boxMessage} onPress={openModal}>
-                        <View style={styles.textContainer}>
-                            <Text style={styles.message}> Compito 1 </Text>
-                            <Text style={styles.hourMessage}>28/06/2026{"\t"}{"\t"}{"\t"}{"\t"}14:30</Text>
-                        </View>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.Cancelbutton} onPress={cancelWork}>
-                        <Text style={styles.message}> Annulla </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.Perfbutton} onPress={executeWork}>
-                        <Text style={styles.message}> Svolto </Text>
-                    </TouchableOpacity>
-               </View>)}
-            <Modal
-                visible={isModalVisible}
-                transparent={true}
-                animationType="slide"
-                onRequestClose={closeModal}
+       <View style={styles.container}>
+            <ScrollView
+                style={{backgroundColor:'#ffa420'}}
             >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
-                            <Text style={styles.closeButtonText}>X</Text>
-                        </TouchableOpacity>
-                        <Divider style={{ backgroundColor: '#ffa420', marginVertical: 1,  width:"30%",  alignSelf: 'center', height:5 }} />
-                        <Divider style={{ backgroundColor: '#ccc', marginVertical: 10 }} />
-                        <Text style={styles.modalText}>Testo</Text>
-                    </View>
-                </View>
-            </Modal>
-        </ScrollView>
+            <Text style={styles.start}>Le tue task </Text>
+                   {works.map((work,key)=>
+                       <View style={styles.container} key={key}>
+                           <TouchableOpacity style={styles.boxMessage} onPress={()=>{openModal(work)}}>
+                               <View style={styles.textContainer}>
+                                   <Text style={styles.message}>Nome:<Text style={styles.infoText}> {work.nome} </Text></Text>
+                                   <Text style={styles.message}>Rischio calcolato: <Text style={styles.infoText}>{getRisk(work?.lwhi)} </Text></Text>
+                                    <Text style={styles.message}>Valutazione IA: <Text style={styles.infoText}>{getMLVerditct(work?.mlVerdict)} </Text></Text>
+                                   <Text style={styles.hourMessage}>{getDate(work.confirmedAt)}{"\t"}{"\t"}{"\t"}{"\t"}{getHour(work?.confirmedAt)}</Text>
+                               </View>
+                               <View style={styles.buttonlist}>
+                                   <View style={{ marginHorizontal: 10, width:150 }}>
+                                       <Button title="Rifiuta" color="red"  onPress={()=>{cancelWork(work?.id)}} />
+                                   </View>
+                                   <View style={{ marginHorizontal: 10, width:150 }}>
+                                       <Button title="Svolto" color="green" onPress={()=>{executeWork(work?.id)}} />
+                                   </View>
+                               </View>
+                           </TouchableOpacity>
+                       </View>
+                   )}
+                   <Modal
+                       visible={isModalVisible}
+                       transparent={true}
+                       animationType="slide"
+                       onRequestClose={closeModal}
+                   >
+                       <View style={styles.modalOverlay}>
+                           <View style={styles.modalContent}>
+                               <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
+                                   <Text style={styles.closeButtonText}>X</Text>
+                               </TouchableOpacity>
+                               <Divider style={{ backgroundColor: '#ffa420', marginVertical: 1,  width:"30%",  alignSelf: 'center', height:5 }} />
+                               <Divider style={{ backgroundColor: '#ccc', marginVertical: 10 }} />
+                               <Text style={styles.modalText}>Tipo Operazione: <Text style={styles.infomodalText}>{getType(selectedWork?.operationType)}</Text></Text>
+                               <Text style={styles.modalText}>Descrizione: <Text style={styles.infomodalText}>{selectedWork?.riskDescription}</Text></Text>
+                           </View>
+                       </View>
+                   </Modal>
+            </ScrollView>
+       </View>
     )
 
 
@@ -93,56 +141,56 @@ export default function WorksScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    //justifyContent: 'left',
+    justifyContent: 'left',
     padding: 1,
     alignItems: 'left',
     backgroundColor:'#ffa420',
-    flexDirection: 'row',
+    //flexDirection: 'row',
     alignItems: 'left',
-    //justifyContent: 'space-between',
+    justifyContent: 'space-between',
   },
   start:{
       fontSize: 24,
       fontWeight: 'bold',
       marginTop:40,
-      marginLeft: 10
+      marginLeft: 10,
+      color:'white',
   },
   boxMessage: {
-      width: 200,
       marginTop: 10,
       marginBottom: 10,
       padding: 10,
       backgroundColor: '#2c2e52',
       borderRadius: 10,
-      flexDirection: 'center',
-      alignItems: 'center',
+      //flexDirection: 'center',
+      //alignItems: 'center',
       //justifyContent: 'space-between',
   },
   message:{
-      fontSize: 18,
+      fontSize: 24,
       fontWeight: 'bold',
       color: 'white'
   },
   Cancelbutton:{
     flex: 1,
+    height:30,
+    width:30,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor:'#ff4700',
-    marginTop: 10,
-    marginBottom: 10,
-    marginLeft:10,
-    width:30,
+    marginLeft:30,
+    marginRight:10,
     borderRadius:5,
   },
   Perfbutton:{
       flex: 1,
+      height:30,
+      width:30,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor:'green',
-      marginTop: 10,
-      marginBottom: 10,
+      marginRight:30,
       marginLeft:10,
-      width:30,
       borderRadius:5,
   },
   buttonlog:{
@@ -229,9 +277,37 @@ const styles = StyleSheet.create({
         color: 'red',
        },
        modalText:{
-           fontSize: 24,
+           fontSize: 20,
            marginTop: 10,
            fontWeight: 'bold',
            color: 'white'
-       }
+       },
+        infomodalText:{
+              fontSize: 20,
+              marginTop: 10,
+              fontWeight: 'bold',
+              color: '#ffa420'
+          },
+   buttonlist:{
+           justifyContent: 'center',
+           alignItems: 'center',
+           flexDirection:'row',
+   },
+    button:{
+        justifyContent: 'center',
+        alignSelf: 'center',
+        alignItems:'center',
+        marginTop:10,
+        backgroundColor:'#ff4700',
+        height: 60,
+        width:200,
+        borderRadius:15
+      },
+  infoText:{
+          fontSize: 24,
+          fontWeight: 'bold',
+          alignItems: 'right',
+          alignSelf: 'right',
+          color: '#ffa420',
+  },
 });

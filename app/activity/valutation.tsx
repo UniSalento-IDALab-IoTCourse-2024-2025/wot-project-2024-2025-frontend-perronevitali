@@ -1,5 +1,5 @@
 import { useState,useEffect,useRef } from 'react';
-import { Platform, Text, StyleSheet, TouchableOpacity,ScrollView,View,Modal } from 'react-native';
+import { Platform, Text, StyleSheet, TouchableOpacity,ScrollView,View,Modal,Button } from 'react-native';
 import {Divider} from "react-native-elements";
 import Feather from '@expo/vector-icons/Feather';
 import {useStomp} from '@/hooks/use-stomp';
@@ -9,23 +9,65 @@ import { useRouter } from 'expo-router';
 import { API_BASE_URL,API_PORT_OS,API_PORT_US } from '@/constants/api';
 
 export default function EvaluateScreen(){
-    const enpointOS = API_BASE_URL+API_PORT_OS
+    const endpointOS = API_BASE_URL+API_PORT_OS
     const [managed,setManaged] = useState("")
     const [tasks,setTasks] = useState([])
+    const [selectedTask,setSelectedTask] = useState(null)
     const [isModalVisible,setModalVisible] = useState(false);
+    const [token,setToken] = useState("")
     const router = useRouter()
     const fetchData = async () =>{
         const managedId = JSON.parse(await AsyncStorage.getItem("managedId"))
         const token =  await AsyncStorage.getItem("token")
+        setToken(token)
         if(managedId){
             console.log("Task Area")
             getTasksArea(token,managedId)
         }else{
-            getAllTasks(token)
+            const areas = await getAreas(token)
+            let allTasks = []
+            for(let area in areas){
+                const tasks = await getAllTasks(token,areas[area].id)
+                for(let task in tasks){
+                    allTasks.push(tasks[task])
+                }
+            }
+            setTasks(allTasks)
+        }
+    }
+    const getAreas = async (token) =>{
+        const url = endpointOS+'/api/areas/'
+        try{
+            const response = await fetch(url,{
+                method : 'GET',
+                headers:{
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+token
+                }
+            })
+            if(!response.ok){
+                console.log("Errore",response.status)
+            }else{
+                const data = await response.json()
+                const areas = data.areas.areasList
+                let areasobj = []
+                for(let area in areas){
+                    const name = areas[area].name
+                    const id = areas[area].id
+                    const bodyArea = {
+                        "id": id,
+                        "name": name
+                    }
+                    areasobj.push(bodyArea)
+                }
+                return areasobj
+            }
+        }catch(e){
+            console.log("Errore ",url,":",e)
         }
     }
     const getAllTasks = async (token,area) =>{
-        const url = enpointOS+'/api/tasks/pending?areaid='+area
+        const url = endpointOS+'/api/tasks/pending?areaid='+area
         try{
             const response = await fetch(url,{
                 method: 'GET',
@@ -38,7 +80,11 @@ export default function EvaluateScreen(){
                 console.log("Errore",response.status)
             }else{
                 const data = await response.json()
-                setTasks(data.tasks.tasksList)
+                const taskData = data.tasks.tasksList
+                let tasks = []
+                for(let task in taskData)
+                    tasks.push(taskData[task])
+                return tasks
             }
 
         }catch(e){
@@ -47,7 +93,7 @@ export default function EvaluateScreen(){
 
     }
     const getTasksArea = async (token) =>{
-        const url = enpointOS+'/api/tasks/pending'
+        const url = endpointOS+'/api/tasks/pending'
         try{
             const response = await fetch(url,{
                 method: 'GET',
@@ -61,42 +107,132 @@ export default function EvaluateScreen(){
             }else{
                 const data = await response.json()
                 setTasks(data.tasks.tasksList)
+                console.log( JSON.stringify(data,'',2))
             }
         }catch(e){
             console.log("Errore",e)
         }
      }
-            const openModal = () =>{
-                setModalVisible(true)
-            }
-            const closeModal = () =>{
-                setModalVisible(false)
-            }
+    const openModal = (task) =>{
+        setSelectedTask(task)
+        setModalVisible(true)
+    }
+    const closeModal = () =>{
+        setSelectedTask(null)
+        setModalVisible(false)
+    }
     useEffect(()=>{
         fetchData()
     },[])
     const comeBackToHome = async () =>{
         router.replace("/")
     }
+    const getDate = (timestamp) =>{
+        const date = new Date(timestamp)
+        return date.toLocaleDateString("it-IT")
+    }
+    const getHour = (timestamp) =>{
+        const date = new Date(timestamp)
+        return date.toLocaleTimeString("it-IT")
+    }
+    const getType = (type) =>{
+        switch(type){
+            case "LOADING": return "CARICO"
+            case "UNLOADING": return "SCARICO"
+            case "INSPECTION": return "ISPEZIONE"
+            case "MAINTENANCE": return "MANUTENZIONE"
+            case "TRANSFER": return "SPOSTAMENTO"
+        }
+    }
+    const getRisk=(risk)=>{
+        if(risk<=10){
+            return "BASSO"
+        }else if(risk>10 && risk<=29){
+                return "MEDIO"
+        }else{
+            return "ALTO"
+        }
+    }
+    const getMLVerditct=(ml)=>{
+        if(ml==="APPROVED")
+            return "SICURO"
+        else
+            return "NON SICURO"
+    }
+    const handleConfirm = async (id) =>{
+        const url=endpointOS+"/api/tasks/"+id+"/confirm"
+        try{
+            const response = await fetch(url,{
+                method: "POST",
+                headers:{
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+token
+                }
+            })
+            if(!response.ok){
+                console.log("Errore",url,":",response.status)
+            }else{
+                const data = await response.json()
+                console.log(JSON.stringify(data,'',2))
+                if(data.result===0){
+                    alert("Task presa in carico!")
+                     router.replace("/")
+                }
+            }
+        }catch(e){
+            console.log("Errore",url,":",e)
+        }
+    }
+    const handleCancel = async (id) =>{
+        const url=endpointOS+"/api/tasks/"+id
+        try{
+            const response = await fetch(url,{
+                method: "DELETE",
+                headers:{
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+token
+                }
+            })
+            if(!response.ok){
+                console.log("Errore",url,":",response.status)
+            }else{
+                const data = await response.json()
+                console.log(JSON.stringify(data,'',2))
+                if(data.result===0){
+                    alert("Task eliminata con successo!")
+                    router.replace("/")
+                }
+            }
+        }catch(e){
+            console.log("Errore",url,":",e)
+        }
+    }
     return(
         <View style={styles.container}>
-            <ScrollView style={{backgroundColor:'#ffa420'}}>
+            <ScrollView
+                style={{backgroundColor:'#ffa420'}}
+                contentContainerStyle={{ flexGrow: 1 }}
+            >
             <Text style={styles.start}>Valuta task </Text>
             {tasks.map((task,key)=>
                 <View style={styles.container} key={key}>
-                    <TouchableOpacity style={styles.boxMessage} onPress={openModal}>
+                    <TouchableOpacity style={styles.boxMessage} onPress={()=>{openModal(task)}}>
                         <View style={styles.textContainer}>
-                            <Text style={styles.message}> {task.nome} </Text>
-                            <Text style={styles.hourMessage}>28/06/2026{"\t"}{"\t"}{"\t"}{"\t"}14:30</Text>
+                            <Text style={styles.message}>Nome:<Text style={styles.infoText}> {task.nome} </Text></Text>
+                            <Text style={styles.message}>Rischio calcolato: <Text style={styles.infoText}>{getRisk(task?.lwhi)} </Text></Text>
+                             <Text style={styles.message}>Valutazione IA: <Text style={styles.infoText}>{getMLVerditct(task?.mlVerdict)} </Text></Text>
+                            <Text style={styles.hourMessage}>{getDate(task.createdAt)}{"\t"}{"\t"}{"\t"}{"\t"}{getHour(task.createdAt)}</Text>
+                        </View>
+                        <View style={styles.buttonlist}>
+                            <View style={{ marginHorizontal: 10, width:150 }}>
+                                <Button title="Annulla" color="red"  onPress={()=>{handleCancel(task?.id)}} />
+                            </View>
+                            <View style={{ marginHorizontal: 10, width:150 }}>
+                                <Button title="Accetta" color="green" onPress={()=>{handleConfirm(task?.id)}} />
+                            </View>
                         </View>
                     </TouchableOpacity>
                     <View style={styles.buttonlist}>
-                    <TouchableOpacity style={styles.Cancelbutton}>
-                        <Text style={styles.message}> Annulla </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.Perfbutton}>
-                        <Text style={styles.message}> Svolto </Text>
-                    </TouchableOpacity>
                     </View>
                 </View>
             )}
@@ -113,7 +249,8 @@ export default function EvaluateScreen(){
                         </TouchableOpacity>
                         <Divider style={{ backgroundColor: '#ffa420', marginVertical: 1,  width:"30%",  alignSelf: 'center', height:5 }} />
                         <Divider style={{ backgroundColor: '#ccc', marginVertical: 10 }} />
-                        <Text style={styles.modalText}>Testo</Text>
+                        <Text style={styles.modalText}>Tipo Operazione: <Text style={styles.infomodalText}>{getType(selectedTask?.operationType)}</Text></Text>
+                        <Text style={styles.modalText}>Descrizione: <Text style={styles.infomodalText}>{selectedTask?.riskDescription}</Text></Text>
                     </View>
                 </View>
             </Modal>
@@ -126,6 +263,7 @@ export default function EvaluateScreen(){
 }
 const styles = StyleSheet.create({
   container: {
+    flex:1,
     justifyContent: 'left',
     padding: 1,
     alignItems: 'left',
@@ -152,7 +290,7 @@ const styles = StyleSheet.create({
       //justifyContent: 'space-between',
   },
   message:{
-      fontSize: 18,
+      fontSize: 24,
       fontWeight: 'bold',
       color: 'white'
   },
@@ -262,11 +400,17 @@ const styles = StyleSheet.create({
         color: 'red',
        },
        modalText:{
-           fontSize: 24,
+           fontSize: 20,
            marginTop: 10,
            fontWeight: 'bold',
            color: 'white'
        },
+        infomodalText:{
+              fontSize: 20,
+              marginTop: 10,
+              fontWeight: 'bold',
+              color: '#ffa420'
+          },
    buttonlist:{
            justifyContent: 'center',
            alignItems: 'center',
@@ -282,4 +426,11 @@ const styles = StyleSheet.create({
         width:200,
         borderRadius:15
       },
+  infoText:{
+          fontSize: 24,
+          fontWeight: 'bold',
+          alignItems: 'right',
+          alignSelf: 'right',
+          color: '#ffa420',
+  },
 });

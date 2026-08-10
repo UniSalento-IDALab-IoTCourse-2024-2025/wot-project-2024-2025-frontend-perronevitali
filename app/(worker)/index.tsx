@@ -49,7 +49,6 @@ export default function WorkerHome() {
    }
    setUser(JSON.parse(await AsyncStorage.getItem("user")))
    getAreas(token)
-   setAuthorizedAreas(JSON.parse(await AsyncStorage.getItem("authArea")))
    //getAuthorizedAreas(token)
    intervalRefAreas.current = setInterval(() => getAreas(token), 10000)
    //intervalRefAuthAreas.current = setInterval(() => getAuthorizedAreas(token), 10000)
@@ -72,9 +71,27 @@ export default function WorkerHome() {
           }else{
                const data = await response.json()
                const areas = data.areas.areasList
+               const areaB = areas.find(({name})=>name==="Zona B")
+               //const areaC = areas.find(({name})=>name==="Zona C")
+               console.log( JSON.stringify(areaB.userIdsInArea.length,'',2) )
+               //console.log( JSON.stringify(areaC.userIdsInArea.length,'',2) )
+               console.log( JSON.stringify(areaB.unauthorizedWorkerIds.length,'',2) )
+               //console.log( JSON.stringify(areaC.unauthorizedWorkerIds.length,'',2) )
+               const auth = JSON.parse(await AsyncStorage.getItem("authArea"))
+               setAuthorizedAreas(auth)
                areas.sort((a1,a2)=>{
                    const nameA1= a1.name.toUpperCase()
                    const nameA2= a2.name.toUpperCase()
+                   const id1 = a1.id
+                   const id2 = a2.id
+                   const auth1 = auth.find((id)=>id===id1)
+                   const auth2 = auth.find((id)=>id===id2)
+                   if(auth1 && !auth2){
+                       return -1
+                   }
+                   if(!auth1 && auth2){
+                       return 1
+                   }
                    if (nameA1 < nameA2) {
                        return -1;
                    }

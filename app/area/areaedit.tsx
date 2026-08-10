@@ -19,6 +19,7 @@ export default function EditArea(){
     const [ip2,setIp2] = useState(0)
     const [ip3,setIp3] = useState(0)
     const [ip4,setIp4] = useState(0)
+    const [port,setPort] = useState(0)
     const getArea = async () => {
         const area = JSON.parse(await AsyncStorage.getItem("infoArea"))
         setID(area.id)
@@ -35,6 +36,7 @@ export default function EditArea(){
         setIp2(ip.split(".")[1])
         setIp3(ip.split(".")[2])
         setIp4(ip.split(".")[3])
+        setPort(area.raspberryPort)
     }
     useEffect(()=>{
         getArea()
@@ -51,6 +53,7 @@ export default function EditArea(){
             "name":name,
             "beaconMAC":mac,
             "ipRaspberry": ip,
+            "raspberryPort": port
         }
         try{
             const response = await fetch(url,{
@@ -122,6 +125,8 @@ export default function EditArea(){
                     <TextInput style={styles.inputIP}maxLength={3} keyboardType="number-pad" value={ip4} onChangeText={setIp4}/>
                 </View>
              </View>
+              <Text style={styles.text}>  Porta</Text>
+              <TextInput  style={styles.input} keyboardType="number-pad" value={port} onChangeText={setPort}/>
              <View style={styles.buttonlist}>
                 <TouchableOpacity style={styles.buttonlog} onPress={comeToOption}>
                     <Text style={styles.textbutton}>Annulla</Text>
