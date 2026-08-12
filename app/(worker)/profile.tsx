@@ -3,6 +3,7 @@ import { StyleSheet,View, Button, Text, TextInput, TouchableOpacity,ScrollView} 
 import { Divider } from 'react-native-elements';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { disconnectStomp } from '@/hooks/stompClient';
 
 export default function ProfileScreen() {
 
@@ -25,6 +26,8 @@ export default function ProfileScreen() {
 
       const logout = async() =>{
           try{
+              await AsyncStorage.clear()
+              disconnectStomp()
               router.push('login')
           }catch(error){
               console.log('Si è verificato un errore durante la cancellazione del token: ',error)

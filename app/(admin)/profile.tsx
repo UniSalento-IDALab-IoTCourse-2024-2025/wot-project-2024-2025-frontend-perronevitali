@@ -25,6 +25,7 @@ export default function ProfileScreen() {
 
     const logout = async() =>{
           try{
+              await AsyncStorage.clear()
               router.push('login')
           }catch(error){
               console.log('Si è verificato un errore durante la cancellazione del token: ',error)

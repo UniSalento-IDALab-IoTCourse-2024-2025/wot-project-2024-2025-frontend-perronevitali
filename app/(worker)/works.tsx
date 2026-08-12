@@ -1,19 +1,19 @@
 import { useState,useEffect } from 'react';
-import { Platform, Text, StyleSheet, TouchableOpacity,View,ScrollView,Modal,Button} from 'react-native';
+import { Platform, Text, StyleSheet, TouchableOpacity,View,ScrollView,Modal,Button, TextInput} from 'react-native';
 import {Divider} from "react-native-elements";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL,API_PORT_OS,API_PORT_US } from '@/constants/api';
 
 export default function WorksScreen() {
 
-    const url = API_BASE_URL
+    const endpointOS = API_BASE_URL + API_PORT_OS
     const [works,setWorks] = useState([])
     const [selectedWork,setSelectedWork] = useState(null)
     const getWorks = async () =>{
         const token = await AsyncStorage.getItem("token")
-        const endpoint = url + API_PORT_OS + '/api/tasks/mine'
+        const url = endpointOS + '/api/tasks/mine'
         try{
-            const response = await fetch(endpoint,{
+            const response = await fetch(url,{
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -42,13 +42,25 @@ export default function WorksScreen() {
     },[])
 
     const [isModalVisible,setModalVisible] = useState(false);
-        const openModal = (work) =>{
-            setSelectedWork(work)
-            setModalVisible(true)
-        }
-        const closeModal = () =>{
-            setModalVisible(false)
-        }
+    const [isModalRejectVisible,setModalRejectVisible] = useState(false)
+    const [rejectWork,setRejectWork] = useState(null)
+    const [rejectText,setRejectText] = useState("")
+    const openModal = (work) =>{
+        setSelectedWork(work)
+        setModalVisible(true)
+    }
+    const closeModal = () =>{
+        setRejectWork(null)
+        setRejectText("")
+        setModalVisible(false)
+    }
+    const openModalReject = (work) =>{
+        setRejectWork(work)
+        setModalRejectVisible(true)
+    }
+    const closeModalRegject = () =>{
+        setModalRejectVisible(false)
+    }
     const getDate = (timestamp) =>{
             const date = new Date(timestamp)
             return date.toLocaleDateString("it-IT")
@@ -81,11 +93,58 @@ export default function WorksScreen() {
             else
                 return "NON SICURO"
         }
-    const cancelWork = () =>{
-        console.log("Ho deciso di annullare il compito")
+    const cancelWork = async () =>{
+        if(rejectText==="" || rejectText===null){
+            alert("Inserisci la motivazione per favore!")
+            return
+        }
+        const url = endpointOS+'/api/tasks/'+rejectWork+'/reject'
+        const token = await AsyncStorage.getItem("token")
+        console.log(url,rejectText)
+       try{
+            const response = await fetch(url,{
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+token
+               },
+                body: JSON.stringify({"reason": rejectText})
+            })
+            if(!response.ok){
+                console.log(response.status)
+            }else{
+                const data = await response.json()
+                if(data.result===0){
+                    alert("Invio rifiuto eseguito!")
+                }
+            }
+        }catch(e){
+            console.log("Errore",e)
+        }
     }
-    const executeWork = () =>{
-        console.log("Ho deciso di eseguire il compito")
+    const executeWork = async (idwork) =>{
+        const url = endpointOS + '/api/tasks/'+idwork+'/complete'
+        console.log(url)
+        const token = await AsyncStorage.getItem("token")
+        try{
+            const response = await fetch(url,{
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+token
+                }
+            })
+            if(!response.ok){
+                console.log("Errore",response.status)
+            }else{
+                const data = await response.json()
+                if(data.result===0){
+                    alert("Task completata con successo!")
+                }
+            }
+        }catch(e){
+            console.log("Errore API",url,":",e)
+        }
     }
 
     return (
@@ -105,7 +164,7 @@ export default function WorksScreen() {
                                </View>
                                <View style={styles.buttonlist}>
                                    <View style={{ marginHorizontal: 10, width:150 }}>
-                                       <Button title="Rifiuta" color="red"  onPress={()=>{cancelWork(work?.id)}} />
+                                       <Button title="Rifiuta" color="red"  onPress={()=>{openModalReject(work?.id)}} />
                                    </View>
                                    <View style={{ marginHorizontal: 10, width:150 }}>
                                        <Button title="Svolto" color="green" onPress={()=>{executeWork(work?.id)}} />
@@ -130,6 +189,34 @@ export default function WorksScreen() {
                                <Text style={styles.modalText}>Tipo Operazione: <Text style={styles.infomodalText}>{getType(selectedWork?.operationType)}</Text></Text>
                                <Text style={styles.modalText}>Descrizione: <Text style={styles.infomodalText}>{selectedWork?.riskDescription}</Text></Text>
                            </View>
+                       </View>
+                   </Modal>
+                   <Modal
+                        visible={isModalRejectVisible}
+                        transparent
+                        animationType="fade"
+                        onRequestClose={() => setModalRejectVisible(false)}
+                   >
+                       <View style={styles.modalRejectOverlay}>
+                       <View style={styles.modalReject}>
+                            <Text style={styles.modalText}> Spiega il motivo del rifiuto{"\n"} </Text>
+                            <TextInput
+                                multiline
+                                value={rejectText}
+                                onChangeText={setRejectText}
+                                placeholder="Scrivi qui..."
+                                style={styles.textArea}
+                                textAlignVertical="top"
+                            />
+                            <View style={styles.buttonlist}>
+                                <View style={{ marginHorizontal: 10 }}>
+                                    <Button title="Annulla" color="red"  onPress={()=>{closeModalRegject()}} />
+                                </View>
+                                <View style={{ marginHorizontal: 10}}>
+                                        <Button title="Invia" color="green" onPress={()=>{cancelWork()}} />
+                                </View>
+                            </View>
+                       </View>
                        </View>
                    </Modal>
             </ScrollView>
@@ -310,4 +397,26 @@ const styles = StyleSheet.create({
           alignSelf: 'right',
           color: '#ffa420',
   },
+ textArea: {
+     height: 120,
+     borderWidth: 1,
+     borderColor: '#ccc',
+     backgroundColor: 'white',
+     borderRadius: 8,
+     padding: 10,
+     marginBottom: 20,
+   },
+
+   modalRejectOverlay: {
+       flex: 1,
+       justifyContent: 'center',
+       alignItems: 'center',
+       backgroundColor: 'rgba(0, 0, 0, 0.5)',
+   },
+   modalReject: {
+       width: '85%',
+       backgroundColor: '#2c2e52',
+       borderRadius: 12,
+       padding: 20,
+     },
 });

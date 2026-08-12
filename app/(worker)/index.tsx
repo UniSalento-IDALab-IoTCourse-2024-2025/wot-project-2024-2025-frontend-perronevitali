@@ -1,4 +1,4 @@
-import { useState,useEffect,useRef } from 'react';
+import { useState,useEffect,useRef, useCallback } from 'react';
 import { Image } from 'expo-image';
 import { View,Platform,ScrollView, Text, StyleSheet, TouchableOpacity,Button,Modal } from 'react-native';
 import { RadioButton } from 'react-native-paper';
@@ -8,7 +8,7 @@ import { HelloWave } from '@/components/hello-wave';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import BeaconService from "@/hooks/beacon-service"
 import {Buffer} from "buffer";
 import CryptoJS from "crypto-js";
@@ -71,12 +71,6 @@ export default function WorkerHome() {
           }else{
                const data = await response.json()
                const areas = data.areas.areasList
-               const areaB = areas.find(({name})=>name==="Zona B")
-               //const areaC = areas.find(({name})=>name==="Zona C")
-               console.log( JSON.stringify(areaB.userIdsInArea.length,'',2) )
-               //console.log( JSON.stringify(areaC.userIdsInArea.length,'',2) )
-               console.log( JSON.stringify(areaB.unauthorizedWorkerIds.length,'',2) )
-               //console.log( JSON.stringify(areaC.unauthorizedWorkerIds.length,'',2) )
                const auth = JSON.parse(await AsyncStorage.getItem("authArea"))
                setAuthorizedAreas(auth)
                areas.sort((a1,a2)=>{
@@ -130,15 +124,53 @@ export default function WorkerHome() {
        await AsyncStorage.setItem("infoArea",JSON.stringify(area))
        router.push("/activity/activities")
     }
-   useEffect(()=>{
-     fetchData()
-     return () => {
-         if (intervalRefAreas.current) clearInterval(intervalRefAreas.current);
-         //if (intervalRefAuthAreas.current) clearInterval(intervalRefAuthAreas.current);
-         if (intervalRefCurrArea.current) clearInterval(intervalRefCurrArea.current);
-     }
+   useFocusEffect(
+     useCallback(() => {
+       let isActive = true;
 
-  },[])
+       const start = async () => {
+         const token = await AsyncStorage.getItem("token");
+
+         if (!token) {
+           router.replace("login");
+           return;
+         }
+
+         const storedUser = await AsyncStorage.getItem("user");
+
+         if (isActive) {
+           setUser(JSON.parse(storedUser));
+         }
+
+         getAreas(token);
+         getCurrentArea();
+
+         intervalRefAreas.current = setInterval(() => {
+           getAreas(token);
+         }, 10000);
+
+         intervalRefCurrArea.current = setInterval(() => {
+           getCurrentArea();
+         }, 1000);
+       };
+
+       start();
+
+       return () => {
+         isActive = false;
+
+         if (intervalRefAreas.current) {
+           clearInterval(intervalRefAreas.current);
+           intervalRefAreas.current = null;
+         }
+
+         if (intervalRefCurrArea.current) {
+           clearInterval(intervalRefCurrArea.current);
+           intervalRefCurrArea.current = null;
+         }
+       };
+     }, [])
+   );
 
   useEffect(()=>{
     if(beacons.length > 0 && ready && user?.id){
@@ -162,95 +194,9 @@ export default function WorkerHome() {
        setModalVisible(false)
    }
 
-  const testNotifica = async () => {
-    try {
-      const { status: permStatus } = await Notifications.requestPermissionsAsync();
-      if (permStatus !== 'granted') { alert('Permessi negati: ' + permStatus); return; }
-      await Notifications.scheduleNotificationAsync({
-        content: { title: 'Test Notifica IoT', body: 'La notifica funziona correttamente!',sound:'alarm.wav' },
-        trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-                          seconds: 1,
-                          channelId: 'default', },
-      });
-      alert('Notifica inviata!');
-    } catch (e) { alert('Errore: ' + e); }
-  };
-
-  const simulaNotificaRemota = async () => {
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: 'Alert IoT',
-        body: 'Temperatura sensore #1 troppo alta: 85°C!',
-        data: { sensorId: 1, valore: 85 },
-        sound: 'alarm.wav',
-      },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-        seconds: 5,
-        channelId: 'default',
-      },
-    });
-    alert("Notifica in arrivo tra 5 secondi... metti l'app in background!");
-  };
-
-  const handleBlePress=() => {
-      startScanning()
-  }
-
-  const testConversion = () =>{
-      /*const string = "ciao sono Ringo"
-      const encode = new Buffer(string).toString("base64")
-      console.log(string,"-",encode)
-      const string2 ="Y2lhbyBhIHR1dHRpIHNvbm8gUmluZ28="
-      const original = new Buffer(string2,"base64").toString("ascii")
-      console.log(string2,"-",original)
-      console.log(string.match(/ringo/gi))
-      const number="0"
-      const hex = Buffer(number).toString("hex")
-      console.log(number,"==",hex)*/
-      const enc = CryptoJS.MD5("Ringo").toString(CryptoJS.enc.Hex)
-      console.log(enc)
-      var options = { mode: CryptoJS.mode.ECB, padding: CryptoJS.pad.Pkcs7 }
-      const key = CryptoJS.enc.Utf8.parse("Ringo Dinyan")
-      const data = CryptoJS.enc.Utf8.parse("DunCANE")
-      const encrypted = CryptoJS.AES.encrypt(data,key,options)
-
-      console.log(encrypted.ciphertext.toString())
-      var decrypted = CryptoJS.AES.decrypt(encrypted,key, options);
-      var plaintext = decrypted.toString(CryptoJS.enc.Utf8);
-      console.log("decrypted ", plaintext);
-  }
-
-  /*const bleButtonLabel = () => {
-    switch (status) {
-      case 'scanning':   return 'Scansione...';
-      case 'connecting': return 'Connessione...';
-      case 'unlocking':  return 'Autenticazione...';
-      case 'reading':    return 'Lettura slot...';
-      case 'connected':  return 'Disconnetti';
-      default:           return 'Connetti BLE';
-    }
-  };
 
 
-  const handleBlePress = () => {
-    if (status === 'connected') {
-      disconnect();
-    } else {
-      scanAndConnect('BlueUp-01-021238');
-    }
-  };
 
-  // Descrizione leggibile del valore Eddystone 0x8800
-  const eddystoneLabel = (val: number | null) => {
-    if (val === null) return 'N/D';
-    switch (val) {
-      case 0x01: return 'Evento 1';
-      case 0x02: return 'Evento 2';
-      case 0x03: return 'In movimento';
-      default:   return `0x${val.toString(16).toUpperCase()}`;
-    }
-  };*/
 
   const getStatusString = (status) =>{
       switch(status){

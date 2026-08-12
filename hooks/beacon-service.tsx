@@ -117,8 +117,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
          if(curr_area["power"]>prev_area["power"]){
             console.log("Ti sei allontanato da",prev_area,"ma ti sei avvicinato a",curr_area)
             prev_area=curr_area
-            curr_area=devicefounded.area
-            console.log(devicefounded)
+            curr_area=devicefounded
             if(client.connected){
                 switchAreaSubscription(devicefounded.area)
                 const date = new Date()
@@ -189,5 +188,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
         const areas = JSON.parse(await AsyncStorage.getItem("areas"))
         const currArea = areas.find(area => area.id === areaID)
         await AsyncStorage.setItem("currArea",JSON.stringify(currArea))
+    }
+    const getCurrentArea = async () =>{
+        const area = await AsyncStorage.getItem("currAreaID")
+        return area
     }
 export default BeaconService;

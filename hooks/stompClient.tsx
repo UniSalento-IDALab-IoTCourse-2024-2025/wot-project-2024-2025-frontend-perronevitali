@@ -8,6 +8,7 @@ const readyCallbacks = [];
 
 let currentAreaSub = null;
 let currentAreaId = null;
+let lastProcessedKey = null
 let messages= new Array()
 export function getStompClient(idUser) {
   if (client) return client;
@@ -64,7 +65,7 @@ export function switchAreaSubscription(idArea) {
   currentAreaId = idArea;
 
   console.log('Sottoscritto alla nuova area:', idArea);
-  sendAlertNoAuth()
+  //sendAlertNoAuth()
   sendWarningMessage()
 }
 
@@ -90,6 +91,7 @@ export function onStompReady(cb) {
 
 function onPersonalMessage(message) {
   console.log('Messaggio personale ricevuto:', JSON.parse(message.body));
+
 }
 function onAreaMessage(message) {
   console.log('Messaggio area ricevuto:', JSON.parse(message.body));
@@ -139,6 +141,22 @@ const inviaNotifica = async (title,body) =>{
         alert('Errore: ' + e);
     }
 }
+export async function disconnectStomp() {
+  if (currentAreaSub) {
+    currentAreaSub.unsubscribe();
+    currentAreaSub = null;
+  }
+  currentAreaId = null;
+
+  if (client) {
+    await client.deactivate();
+    client = null;
+  }
+
+  stompReady = false;
+  messages = [];
+  console.log('STOMP disconnesso manualmente');
+}
 const sendWarningMessage = async () =>{
     let area = JSON.parse(await AsyncStorage.getItem("currArea"))
     console.log(area.status)
@@ -151,8 +169,12 @@ const sendAlertNoAuth = async () =>{
     const unworkers = area.unauthorizedWorkerIds
     const unworkersl = area.unauthorizedWorkerIds.length
     const user = JSON.parse(await AsyncStorage.getItem("user"))
+    console.log(user.id)
     const intruder = unworkers.find((unworker)=>unworker===user.id)
     if(unworkersl>0 && !intruder){
         inviaNotifica("AVVISO FARO","Attenzione, del personale non autorizzato è appena entrato nell'area!")
     }
+}
+const sleepFunction = async () =>{
+    await sleep(5000)
 }

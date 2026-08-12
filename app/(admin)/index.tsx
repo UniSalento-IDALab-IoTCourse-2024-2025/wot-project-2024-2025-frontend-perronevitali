@@ -6,6 +6,8 @@ import { API_BASE_URL,API_PORT_OS,API_PORT_US } from '@/constants/api';
 import { useRouter } from 'expo-router';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {useStomp} from '@/hooks/use-stomp';
+import BeaconService from "@/hooks/beacon-service"
 
 export default function AdminHome () {
     const endpointUS = API_BASE_URL+API_PORT_US
@@ -16,6 +18,8 @@ export default function AdminHome () {
     const [managedAreas,setManagedAreas] = useState([])
     const [isModalVisible,setModalVisible] = useState(false)
     const [selectedArea,setSelectedArea] = useState(null)
+    const { client, ready } = useStomp(user?.id);
+    const [beacons,setBeacons] = useState([])
     const getManagedAreas = async (user,token) =>{
         const url = endpointUS+'/api/admins/'+user.id
         try{
@@ -37,7 +41,7 @@ export default function AdminHome () {
                     const managedArea = await getArea(managedID,token)
                     if(managedArea)
                            managedAreas.push(managedArea)
-
+                    getAllAreas(token)
                 }else{
                     managedAreas = await getAllAreas(token)
                 }
@@ -65,6 +69,16 @@ export default function AdminHome () {
             }else{
                 const data = await response.json()
                 const areas = data.areas.areasList
+                let zones = new Array()
+                for(let area in areas){
+                    const zone = {
+                        "mac": areas[area]["beaconMAC"],
+                        "area": areas[area]["id"],
+                        "power": 0
+                    }
+                    zones.push(zone)
+                }
+                setBeacons(zones)
                 return areas
             }
         }catch(e){
@@ -103,12 +117,18 @@ export default function AdminHome () {
     }
     const fetchData = async () =>{
         const user = JSON.parse(await AsyncStorage.getItem("user"))
+        setUser(user)
         const token = await AsyncStorage.getItem("token")
         getManagedAreas(user,token)
     }
     useEffect(() => {
         fetchData()
     },[])
+    useEffect(()=>{
+        if(beacons.length > 0 && ready && user?.id){
+          BeaconService.startAll(beacons,user.id)
+        }
+    },[beacons, ready, user])
     const getStatusString = (status) =>{
         switch(status){
             case 0: return "CALM";
