@@ -13,6 +13,7 @@ export default function AdminHome () {
     const endpointUS = API_BASE_URL+API_PORT_US
     const endpointOS = API_BASE_URL+API_PORT_OS
     const router = useRouter()
+    const [sessionKey, setSessionKey] = useState(0);
     const insets = useSafeAreaInsets();
     const [user,setUser] = useState(null)
     const [managedAreas,setManagedAreas] = useState([])
@@ -116,6 +117,7 @@ export default function AdminHome () {
 
     }
     const fetchData = async () =>{
+        setSessionKey(prev=>prev+1)
         const user = JSON.parse(await AsyncStorage.getItem("user"))
         setUser(user)
         const token = await AsyncStorage.getItem("token")

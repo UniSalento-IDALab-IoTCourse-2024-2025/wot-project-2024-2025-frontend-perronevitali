@@ -36,14 +36,28 @@ export default function MessageScreen() {
         }
     }*/
     const getMessages = async() =>{
-        setMessages(JSON.parse(await AsyncStorage.getItem("mexs")))
-        console.log(messages)
+        const messages = await AsyncStorage.getItem("mexs")
+        setMessages(JSON.parse(messages))
+    }
+    const getModalText = (message) =>{
+        if(!message)
+            return ""
+        if(message.type==="TASK_ASSIGNED")
+            return "Nome task:"
+        return ""
+    }
+    const getModalInfo = (message) =>{
+        if(!message)
+            return ""
+        if(message.type==="TASK_ASSIGNED")
+            return message.taskName
+        return ""
     }
     useEffect(()=>{
         getMessages()
         intervalRefMessages.current = setInterval(() => getMessages(), 10000)
         /*return () => {
-            if (intervalRef.current) clearInterval(intervalRef.current);
+           if (intervalRef.current) clearInterval(intervalRef.current);
         }*/
     },[])
     const getDate = (timestamp) =>{
@@ -115,7 +129,8 @@ export default function MessageScreen() {
                         </TouchableOpacity>
                         <Divider style={{ backgroundColor: '#ffa420', marginVertical: 1,  width:"30%",  alignSelf: 'center', height:5 }} />
                         <Divider style={{ backgroundColor: '#ccc', marginVertical: 10 }} />
-                        <Text style={styles.modalText}>{selectedMessage?.description}</Text>
+                        <Text style={styles.modalText}>{getModalText(selectedMessage)}<Text style={styles.infoText}>{getModalInfo(selectedMessage)}</Text></Text>
+                        <Text style={styles.modalText}>Descrizione:<Text style={styles.infoText}>{selectedMessage?.description}</Text></Text>
                     </View>
                 </View>
            </Modal>
@@ -135,6 +150,7 @@ const styles = StyleSheet.create({
   start:{
       fontSize: 24,
       fontWeight: 'bold',
+      color: 'white',
       marginTop:40,
       marginLeft: 10,
   },
@@ -251,5 +267,12 @@ const styles = StyleSheet.create({
        marginTop: 10,
        fontWeight: 'bold',
        color: 'white'
-   }
+   },
+   infoText:{
+       fontSize: 24,
+       fontWeight: 'bold',
+       alignItems: 'right',
+       alignSelf: 'right',
+      color: '#ffa420',
+   },
 });

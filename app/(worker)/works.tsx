@@ -115,7 +115,9 @@ export default function WorksScreen() {
             }else{
                 const data = await response.json()
                 if(data.result===0){
+                    closeModalRegject()
                     alert("Invio rifiuto eseguito!")
+                    getWorks()
                 }
             }
         }catch(e){
@@ -140,6 +142,7 @@ export default function WorksScreen() {
                 const data = await response.json()
                 if(data.result===0){
                     alert("Task completata con successo!")
+                    getWorks()
                 }
             }
         }catch(e){

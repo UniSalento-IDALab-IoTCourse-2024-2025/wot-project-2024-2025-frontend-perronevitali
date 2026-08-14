@@ -87,6 +87,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
               prev_area["power"]=scannedDevice.rssi
               if(client.connected){
                   switchAreaSubscription(devicefounded.area)
+                  setCurrentArea(devicefounded.area)
                   const date = new Date()
                   const message = JSON.stringify(
                       {
@@ -103,7 +104,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
                       body: message
                   })
                   console.log("Messaggio pubblicato")
-                  setCurrentArea(devicefounded.area)
               }
               return;
           }else{
@@ -120,6 +120,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
             curr_area=devicefounded
             if(client.connected){
                 switchAreaSubscription(devicefounded.area)
+                setCurrentArea(devicefounded.area)
                 const date = new Date()
                 const message = JSON.stringify(
                     {
@@ -136,7 +137,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
                     body: message
                 })
                 console.log("Messaggio pubblicato")
-                setCurrentArea(devicefounded.area)
             }else{
                 console.log("STOMP non ancora connesso, scarto questo tentativo")
            }
@@ -187,6 +187,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
         await AsyncStorage.setItem("currAreaID",areaID)
         const areas = JSON.parse(await AsyncStorage.getItem("areas"))
         const currArea = areas.find(area => area.id === areaID)
+        console.log("Area Corrente",currArea)
         await AsyncStorage.setItem("currArea",JSON.stringify(currArea))
     }
     const getCurrentArea = async () =>{

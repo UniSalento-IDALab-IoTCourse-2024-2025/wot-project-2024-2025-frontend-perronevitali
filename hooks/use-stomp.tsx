@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { getStompClient, isStompReady } from '@/hooks/stompClient';
 
-export function useStomp(idRabbit) {
+export function useStomp(idRabbit, sessionKey) {
   const clientRef = useRef(null);
   const [ready, setReady] = useState(isStompReady());
 
@@ -17,7 +17,7 @@ export function useStomp(idRabbit) {
     }, 200);
 
     return () => clearInterval(interval);
-  }, [idRabbit]);
+  }, [idRabbit,sessionKey]);
 
   return { client: clientRef.current, ready };
 }

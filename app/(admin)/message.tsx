@@ -23,6 +23,34 @@ export default function MessageScreen() {
         const raw_areas = await AsyncStorage.getItem("idAreas")
         setAreas(JSON.parse(raw_areas))
     }
+    const getModalTextTask = (message) =>{
+        if(!message)
+            return ""
+        if(message.type==="TASK_REJECTED")
+            return "Nome task :"
+        return ""
+    }
+    const getModalInfoTask = (message) =>{
+        if(!message)
+            return ""
+        if(message.type==="TASK_REJECTED")
+            return message.taskName
+        return ""
+    }
+    const getModalTextMotivation = (message) =>{
+        if(!message)
+            return ""
+        if(message.type==="TASK_REJECTED")
+            return "Motivo rifiuto: "
+        return ""
+    }
+    const getModalInfoMotivation = (message) =>{
+        if(!message)
+            return ""
+        if(message.type==="TASK_REJECTED")
+            return message.reason
+        return ""
+    }
     /*const readLastMessage = async () =>{
         let lastMessage = JSON.parse(await AsyncStorage.getItem("lastAreaMessage"))
         if(!lastMessage)
@@ -36,8 +64,9 @@ export default function MessageScreen() {
         }
     }*/
     const getMessages = async() =>{
-        setMessages(JSON.parse(await AsyncStorage.getItem("mexs")))
-        console.log(messages)
+        const messages = await AsyncStorage.getItem("mexs")
+        console.log("Mex",messages)
+        setMessages(JSON.parse(messages))
     }
     useEffect(()=>{
         getMessages()
@@ -115,7 +144,9 @@ export default function MessageScreen() {
                         </TouchableOpacity>
                         <Divider style={{ backgroundColor: '#ffa420', marginVertical: 1,  width:"30%",  alignSelf: 'center', height:5 }} />
                         <Divider style={{ backgroundColor: '#ccc', marginVertical: 10 }} />
-                        <Text style={styles.modalText}>{selectedMessage?.description}</Text>
+                        <Text style={styles.modalText}>{getModalTextTask(selectedMessage)}<Text style={styles.infoText}>{getModalInfoTask(selectedMessage)}</Text></Text>
+                        <Text style={styles.modalText}>Descrizione:<Text style={styles.infoText}>{selectedMessage?.description}</Text></Text>
+                        <Text style={styles.modalText}>{getModalTextMotivation(selectedMessage)}<Text style={styles.infoText}>{getModalInfoMotivation(selectedMessage)}</Text></Text>
                     </View>
                 </View>
            </Modal>
@@ -135,6 +166,7 @@ const styles = StyleSheet.create({
   start:{
       fontSize: 24,
       fontWeight: 'bold',
+      color: 'white',
       marginTop:40,
       marginLeft: 10,
   },
@@ -251,5 +283,12 @@ const styles = StyleSheet.create({
        marginTop: 10,
        fontWeight: 'bold',
        color: 'white'
+   },
+   infoText:{
+       fontSize: 24,
+       fontWeight: 'bold',
+       alignItems: 'right',
+       alignSelf: 'right',
+       color: '#ffa420',
    }
 });

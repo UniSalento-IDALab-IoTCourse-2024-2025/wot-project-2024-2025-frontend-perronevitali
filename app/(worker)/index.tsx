@@ -32,9 +32,10 @@ export default function WorkerHome() {
   const intervalRefAreas = useRef(null);
   const intervalRefCurrArea= useRef(null);
   const [intervalID,setIntervalID] = useState(0)
+  const [sessionKey, setSessionKey] = useState(0);
   const [user,setUser] = useState(null)
   const [isModalVisible,setModalVisible] = useState(false);
-  const { client, ready } = useStomp(user?.id);
+  const { client, ready } = useStomp(user?.id,sessionKey);
   const [currentArea, setCurrentArea] = useState(null);
   const [selectedArea,setSelectedArea] = useState(null);
   const getCurrentArea = async () => {
@@ -42,6 +43,7 @@ export default function WorkerHome() {
       setCurrentArea(currAreaID)
   }
   const fetchData = async () =>{
+   setSessionKey(prev => prev + 1);
    const token = await AsyncStorage.getItem("token")
    if(token==="" || token===null){
         router.replace("login")
