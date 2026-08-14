@@ -9,54 +9,58 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useRouter } from 'expo-router';
 import Entypo from '@expo/vector-icons/Entypo';
+import StatusPill from '@/components/status-pill';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const router = useRouter()
   return (
-    <Tabs
-      screenOptions={{
-        tabBarStyle: { position: 'absolute', backgroundColor:'#2c2e52'},
-        tabBarActiveTintColor: "#ffa420",
-        tabBarInactiveTintColor: "white",
-        headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
-      <Tabs.Screen
-        name="index"
+    <View style={{ flex: 1 }}>
+      <StatusPill />
+      <Tabs
+        screenOptions={{
+          tabBarStyle: { position: 'absolute', backgroundColor:'#2c2e52'},
+          tabBarActiveTintColor: "#ffa420",
+          tabBarInactiveTintColor: "white",
+          headerShown: false,
+          tabBarButton: HapticTab,
+        }}>
+        <Tabs.Screen
+          name="index"
+          options={{
+            title: 'Home',
+            tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="inventory"
+          options={{
+              title: 'Inventory',
+              tabBarIcon: ({ color }) => <Entypo name="box" size={24} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="tasks"
+          options={{
+          title: 'Task assignment',
+              tabBarIcon: ({ color }) => <FontAwesome5 name="clipboard-list" size={24} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="message"
+          options={{
+              title: 'Message',
+              tabBarIcon: ({ color }) => <Entypo name="message" size={24} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+        name="profile"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: 'Profilo',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.fill" color={color} />,
         }}
-      />
-      <Tabs.Screen
-        name="inventory"
-        options={{
-            title: 'Inventory',
-            tabBarIcon: ({ color }) => <Entypo name="box" size={24} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="tasks"
-        options={{
-        title: 'Task assignment',
-            tabBarIcon: ({ color }) => <FontAwesome5 name="clipboard-list" size={24} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="message"
-        options={{
-            title: 'Message',
-            tabBarIcon: ({ color }) => <Entypo name="message" size={24} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-      name="profile"
-      options={{
-        title: 'Profilo',
-        tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.fill" color={color} />,
-      }}
-      />
-    </Tabs>
+        />
+      </Tabs>
+    </View>
   );
 }

@@ -21,7 +21,7 @@ export default function AdminHome () {
     const [selectedArea,setSelectedArea] = useState(null)
     const { client, ready } = useStomp(user?.id);
     const [beacons,setBeacons] = useState([])
-    const getManagedAreas = async (user,token) =>{
+    const getManagedArea = async (user,token) =>{
         const url = endpointUS+'/api/admins/'+user.id
         try{
             const response = await fetch(url,{
@@ -65,11 +65,12 @@ export default function AdminHome () {
                 }
             })
             if(!response.ok){
-                response("Errore api/areas/",response.status)
+                console.log("Errore api/areas/",response.status)
                 return null
             }else{
                 const data = await response.json()
                 const areas = data.areas.areasList
+                await AsyncStorage.setItem('areas',JSON.stringify(areas))
                 let zones = new Array()
                 for(let area in areas){
                     const zone = {
@@ -121,7 +122,7 @@ export default function AdminHome () {
         const user = JSON.parse(await AsyncStorage.getItem("user"))
         setUser(user)
         const token = await AsyncStorage.getItem("token")
-        getManagedAreas(user,token)
+        getManagedArea(user,token)
     }
     useEffect(() => {
         fetchData()
@@ -133,10 +134,8 @@ export default function AdminHome () {
     },[beacons, ready, user])
     const getStatusString = (status) =>{
         switch(status){
-            case 0: return "CALM";
-            case 1: return "ALERT";
             case 99: return "DANGER";
-            default: return "UNKNOWN";
+            default: return "OK";
         }
     }
     const openModal = (area) =>{
@@ -324,7 +323,6 @@ const styles = StyleSheet.create({
     },
   modalOverlay: {
         flex: 1,
-        //backgroundColor: 'rgba(0, 0, 0, 0.5)',
         justifyContent: 'flex-end',
     },
     modalContent: {

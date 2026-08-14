@@ -26,6 +26,10 @@ export default function RootLayout() {
           sound: 'alarm.wav',
           vibrationPattern: [0, 250, 250, 250],
         });
+        Notifications.setNotificationChannelAsync('quiet', {
+          name: 'Quiet',
+          importance: Notifications.AndroidImportance.DEFAULT,
+        });
       }, []);
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
@@ -50,6 +54,7 @@ export default function RootLayout() {
          <Stack.Screen name="area/thresholdarea" options={{ headerShown: false }}/>
          <Stack.Screen name="area/deletearea" options={{ headerShown: false }}/>
          <Stack.Screen name="area/areaedit" options={{ headerShown: false }}/>
+         <Stack.Screen name="area/history" options={{ headerShown: false }}/>
          <Stack.Screen name="item/itemopt" options={{ headerShown: false }}/>
          <Stack.Screen name="item/newitem" options={{ headerShown: false }}/>
          <Stack.Screen name="item/updatestore" options={{ headerShown: false }}/>

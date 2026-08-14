@@ -51,9 +51,7 @@ export default function WorkerHome() {
    }
    setUser(JSON.parse(await AsyncStorage.getItem("user")))
    getAreas(token)
-   //getAuthorizedAreas(token)
    intervalRefAreas.current = setInterval(() => getAreas(token), 10000)
-   //intervalRefAuthAreas.current = setInterval(() => getAuthorizedAreas(token), 10000)
    intervalRefCurrArea.current = setInterval(() => getCurrentArea(), 1000)
   }
   const getAreas = async (token) =>{
@@ -108,7 +106,6 @@ export default function WorkerHome() {
                await AsyncStorage.setItem("areas",JSON.stringify(areas))
                let zones = new Array()
                for(let area in areas){
-                   //tutte le zone avranno inizializzata la potenza a 0
                    const zone = {
                        "mac": areas[area]["beaconMAC"],
                        "area": areas[area]["id"],
@@ -196,16 +193,10 @@ export default function WorkerHome() {
        setModalVisible(false)
    }
 
-
-
-
-
   const getStatusString = (status) =>{
       switch(status){
-        case 0: return "CALM";
-        case 1: return "ALERT";
         case 99: return "DANGER";
-        default: return "UNKNOWN";
+        default: return "OK";
       }
   }
   return (
@@ -266,7 +257,7 @@ export default function WorkerHome() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
+    //justifyContent: 'center',
     alignItems: 'center',
     backgroundColor:'#ffa420',
   },
@@ -379,7 +370,6 @@ const styles = StyleSheet.create({
     },
   modalOverlay: {
         flex: 1,
-        //backgroundColor: 'rgba(0, 0, 0, 0.5)',
         justifyContent: 'flex-end',
     },
     modalContent: {
