@@ -75,26 +75,22 @@ export default function MessageScreen() {
   return (
     <ScrollView style={{ backgroundColor: '#ffa420' }}>
       <Text style={styles.start}>I tuoi messaggi</Text>
-      <TouchableOpacity onPress={() => router.push('/area/history')}>
-        <Text style={styles.historyLink}>Vedi storico completo →</Text>
+      <TouchableOpacity style={styles.buttonlog} onPress={() => router.push('/area/history')}>
+        <Text style={styles.textbutton}>Vedi storico completo</Text>
       </TouchableOpacity>
 
       <Text style={styles.selectArea}>Prima del tuo arrivo</Text>
       <View style={styles.container}>
-        {recentMessages.length === 0 ? (
-          <Text style={styles.placeholder}>Nessun evento registrato per quest'area</Text>
-        ) : (
+        {
           recentMessages.map((m, key) => renderCard(m, 'recent-' + key))
-        )}
+        }
       </View>
 
       <Text style={styles.selectArea}>In tempo reale</Text>
       <View style={styles.container}>
-        {liveMessages.length === 0 ? (
-          <Text style={styles.placeholder}>Nessun evento ricevuto finora</Text>
-        ) : (
-          liveMessages.map((m, key) => renderCard(m, 'live-' + key))
-        )}
+        {
+          liveMessages?.map((m, key) => renderCard(m, 'live-' + key))
+        }
       </View>
 
       <Modal visible={isModalVisible} transparent animationType="slide" onRequestClose={closeModal}>
@@ -139,15 +135,16 @@ const styles = StyleSheet.create({
     marginTop: 40,
     marginLeft: 10,
   },
-  historyLink: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 10,
-    marginTop: 6,
-    marginBottom: 4,
-    textDecorationLine: 'underline',
-  },
+ buttonlog:{
+     justifyContent: 'center',
+     alignItems: 'center',
+     backgroundColor: '#ff4700',
+    height: 55,
+    width: 200,
+    borderRadius: 15,
+    marginTop: 20,
+    marginLeft:20
+   },
   selectArea: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -220,5 +217,10 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: '#ffa420',
+  },
+  textbutton:{
+      fontSize:18,
+      fontWeight: 'bold',
+      color:'white'
   },
 });
