@@ -1,4 +1,5 @@
 import { Client } from '@stomp/stompjs';
+import { Client as MqttClient } from 'react-native-paho-mqtt';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { API_BASE_URL, API_PORT_OS, API_PORT_US } from '@/constants/api';
@@ -9,13 +10,21 @@ const readyCallbacks = [];
 const endpointUS = API_BASE_URL + API_PORT_US;
 const endpointOS = API_BASE_URL + API_PORT_OS;
 
-let currentAreaSub = null;
+const AREA_SUBTOPICS = ['alert', 'unauthorized', 'danger'];
+
+let mqttClient = null;
+let mqttReady = false;
+let currentAreaTopics = [];
 let currentAreaId = null;
+let pendingAreaId = null;
+let mqttReconnectTimer = null;
 let personalSub = null;
 
-// due canali indipendenti: se entrambi presenti in /recent, si tiene solo il più recente
-const SENSOR_CHANNEL_TYPES = ['AREA_ALERT', 'AREA_SAFE'];
-const DANGER_CHANNEL_TYPES = ['AREA_DANGER', 'AREA_DANGER_CLEARED'];
+const mqttStorage = {
+  setItem: (key, item) => AsyncStorage.setItem(key, item),
+  getItem: (key) => AsyncStorage.getItem(key),
+  removeItem: (key) => AsyncStorage.removeItem(key),
+};
 
 export function getStompClient(idUser) {
   if (client) return client;
@@ -44,47 +53,98 @@ export function getStompClient(idUser) {
     onDisconnect: () => {
       console.log('STOMP DISCONNESSO');
       stompReady = false;
-      currentAreaSub = null;
+      currentAreaTopics = [];
       currentAreaId = null;
     },
   });
 
   client.activate();
+  connectMqtt();
   return client;
 }
 
-export function switchAreaSubscription(idArea) {
-  if (!client || !stompReady) return;
-  if (!idArea) return;
-  if (idArea === currentAreaId) return; // già iscritto a questa area, non fare nulla
+function connectMqtt() {
+  if (mqttClient) return;
 
-  if (currentAreaSub) {
-    currentAreaSub.unsubscribe();
-    currentAreaSub = null;
+  mqttClient = new MqttClient({
+    uri: 'ws://100.65.22.118:15675/ws',
+    clientId: 'faro-area-' + Date.now(),
+    storage: mqttStorage,
+  });
+
+  mqttClient.on('connectionLost', (responseObject) => {
+    console.log('MQTT DISCONNESSO:', responseObject.errorMessage);
+    mqttReady = false;
+    currentAreaTopics = [];
+    scheduleMqttReconnect();
+  });
+
+  mqttClient.on('messageReceived', onAreaMqttMessage);
+
+  doMqttConnect();
+}
+
+function doMqttConnect() {
+  mqttClient
+    .connect({ userName: 'FARO', password: 'FARO' })
+    .then(() => {
+      console.log('MQTT CONNESSO');
+      mqttReady = true;
+      currentAreaId = null;
+      if (pendingAreaId) {
+        const idArea = pendingAreaId;
+        pendingAreaId = null;
+        switchAreaSubscription(idArea);
+      }
+    })
+    .catch((error) => {
+      console.log('MQTT ERROR:', error);
+      scheduleMqttReconnect();
+    });
+}
+
+function scheduleMqttReconnect() {
+  if (mqttReconnectTimer) return;
+  mqttReconnectTimer = setTimeout(() => {
+    mqttReconnectTimer = null;
+    if (!mqttReady && mqttClient) {
+      doMqttConnect();
+    }
+  }, 3000);
+}
+
+export function switchAreaSubscription(idArea) {
+  console.log('switchAreaSubscription chiamata, mqttReady =', mqttReady);
+  if (!idArea) return;
+
+  if (!mqttClient || !mqttReady) {
+    pendingAreaId = idArea;
+    return;
   }
 
-  currentAreaSub = client.subscribe(
-    '/exchange/faro.areas/area.' + idArea,
-    onAreaMessage
-  );
+  if (idArea === currentAreaId) return; // già iscritto a questa area, non fare nulla
+
+  currentAreaTopics.forEach((topic) => mqttClient.unsubscribe(topic));
+
+  currentAreaTopics = AREA_SUBTOPICS.map((subTopic) => 'area/' + idArea + '/' + subTopic);
+  currentAreaTopics.forEach((topic) => mqttClient.subscribe(topic, { qos: 1 }));
   currentAreaId = idArea;
 
   console.log('Sottoscritto alla nuova area:', idArea);
 
-  // la lista "in tempo reale" riparte da zero: gli eventi live della vecchia area
-  // non hanno senso mostrati come se riguardassero quella nuova
   AsyncStorage.setItem('mexsLive', JSON.stringify([]));
+  AsyncStorage.setItem('mexsRecent', JSON.stringify([]));
 
-  loadRecentForArea(idArea);
   refreshCurrentAreaFromServer(idArea, { notifyIfDanger: true });
 }
 
 export function clearAreaSubscription() {
-  if (currentAreaSub) {
-    currentAreaSub.unsubscribe();
-    currentAreaSub = null;
-    currentAreaId = null;
+  if (mqttClient) {
+    currentAreaTopics.forEach((topic) => mqttClient.unsubscribe(topic));
   }
+  currentAreaTopics = [];
+  currentAreaId = null;
+  pendingAreaId = null;
 }
 
 export function getExistingStompClient() {
@@ -106,8 +166,7 @@ function onPersonalMessage(message) {
   switch (type) {
     case 'TASK_ASSIGNED':
       inviaNotifica('Nuova task', 'Hai una nuova task', true);
-      // il worker viene autorizzato su un'area solo quando gli viene assegnata una task
-      // in quell'area: le aree autorizzate vanno quindi ricaricate a ogni nuova assegnazione
+
       getAuthorizedAreas();
       break;
     case 'TASK_REJECTED':
@@ -116,21 +175,26 @@ function onPersonalMessage(message) {
     default:
       return;
   }
-  // Nota: TASK_ASSIGNED/TASK_REJECTED non vengono storicizzati localmente (vedi piano,
-  // punto 1.3) — solo notifica. L'aggiornamento della lista task avviene al prossimo
-  // mount/focus dello screen task, non c'è ancora un trigger di refresh immediato.
+
 }
 
-function onAreaMessage(message) {
-  console.log('Messaggio area ricevuto:', JSON.parse(message.body));
-  const mex = JSON.parse(message.body);
-  handleLiveAreaEvent(mex.type, mex.payload, mex.timestamp);
+function onAreaMqttMessage(message) {
+  const raw = message.payloadString;
+  if (!raw) return;
+  console.log('Messaggio area ricevuto:', JSON.parse(raw));
+  const mex = JSON.parse(raw);
+  handleAreaEvent(mex.type, mex.payload, mex.timestamp, message.retained);
 }
 
-async function handleLiveAreaEvent(type, payload, timestamp) {
+async function handleAreaEvent(type, payload, timestamp, retained) {
   const user = JSON.parse(await AsyncStorage.getItem('user'));
   const display = buildDisplayMessage(type, payload, timestamp, user?.id);
-  if (!display) return; // tipo sconosciuto, ignorato
+  if (!display) return;
+
+  if (retained) {
+    await appendRecentMessage(display);
+    return;
+  }
 
   notifyForEvent(type, display);
   await appendLiveMessage(display);
@@ -144,8 +208,6 @@ function notifyForEvent(type, display) {
   switch (type) {
     case 'AREA_ALERT':
     case 'AREA_DANGER':
-      // stesso trattamento urgente per entrambi: il worker non deve distinguere
-      // se il pericolo viene dai sensori o dall'accumulo task
       inviaNotifica(display.header, display.description, true);
       break;
     case 'AREA_SAFE':
@@ -153,7 +215,6 @@ function notifyForEvent(type, display) {
       inviaNotifica(display.header, display.description, false);
       break;
     case 'AREA_UNAUTHORIZED':
-      // decisione presa: nessun suono per questo tipo di evento
       inviaNotifica(display.header, display.description, false);
       break;
     default:
@@ -161,9 +222,7 @@ function notifyForEvent(type, display) {
   }
 }
 
-// Converte un evento grezzo (type + payload + timestamp) in un oggetto pronto per la UI.
-// Usata sia per gli eventi live sia per la risposta di /recent e dello storico paginato
-// (stessa forma) — esportata perché riusata anche in app/area/history.tsx.
+
 export function buildDisplayMessage(type, payload, timestamp, currentUserId) {
   switch (type) {
     case 'AREA_ALERT':
@@ -224,52 +283,11 @@ export function buildDisplayMessage(type, payload, timestamp, currentUserId) {
   }
 }
 
-async function loadRecentForArea(areaId) {
-  try {
-    const token = await AsyncStorage.getItem('token');
-    const user = JSON.parse(await AsyncStorage.getItem('user'));
-    const url = endpointOS + '/api/message-history/areas/' + areaId + '/recent';
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: 'Bearer ' + token,
-      },
-    });
-    if (!response.ok) {
-      console.log('Errore GET /api/message-history/areas/.../recent', response.status);
-      await AsyncStorage.setItem('mexsRecent', JSON.stringify([]));
-      return;
-    }
-    const data = await response.json();
-    const raw = data.messages || [];
-    const display = raw
-      .map((entry) => buildDisplayMessage(entry.type, entry.payload, entry.timestamp, user?.id))
-      .filter(Boolean);
-    const filtered = filterRecentByChannel(display);
-    await AsyncStorage.setItem('mexsRecent', JSON.stringify(filtered));
-  } catch (e) {
-    console.log('Errore chiamata /recent', e);
-  }
-}
-
-function filterRecentByChannel(displayMessages) {
-  const sensors = displayMessages.filter((m) => SENSOR_CHANNEL_TYPES.includes(m.type));
-  const danger = displayMessages.filter((m) => DANGER_CHANNEL_TYPES.includes(m.type));
-  const unauthorized = displayMessages.find((m) => m.type === 'AREA_UNAUTHORIZED');
-
-  const latest = (arr) =>
-    arr.length === 0
-      ? null
-      : arr.reduce((a, b) => (new Date(a.timestamp) > new Date(b.timestamp) ? a : b));
-
-  const result = [];
-  const sensorLatest = latest(sensors);
-  if (sensorLatest) result.push(sensorLatest);
-  const dangerLatest = latest(danger);
-  if (dangerLatest) result.push(dangerLatest);
-  if (unauthorized) result.push(unauthorized);
-  return result;
+async function appendRecentMessage(display) {
+  const raw = await AsyncStorage.getItem('mexsRecent');
+  const list = raw ? JSON.parse(raw) : [];
+  list.unshift(display); // più recente in cima
+  await AsyncStorage.setItem('mexsRecent', JSON.stringify(list));
 }
 
 async function appendLiveMessage(display) {
@@ -304,11 +322,18 @@ const inviaNotifica = async (title, body, urgent) => {
 };
 
 export async function disconnectStomp() {
-  if (currentAreaSub) {
-    currentAreaSub.unsubscribe();
-    currentAreaSub = null;
+  if (mqttReconnectTimer) {
+    clearTimeout(mqttReconnectTimer);
+    mqttReconnectTimer = null;
   }
+
+  if (mqttClient) {
+    currentAreaTopics.forEach((topic) => mqttClient.unsubscribe(topic));
+  }
+  currentAreaTopics = [];
   currentAreaId = null;
+  pendingAreaId = null;
+
   if (personalSub) {
     personalSub.unsubscribe();
     personalSub = null;
@@ -318,16 +343,19 @@ export async function disconnectStomp() {
     await client.deactivate();
     client = null;
   }
-
   stompReady = false;
+
+  if (mqttClient) {
+    mqttClient.disconnect();
+    mqttClient = null;
+  }
+  mqttReady = false;
+
   await AsyncStorage.setItem('mexsLive', JSON.stringify([]));
-  console.log('STOMP disconnesso manualmente');
+  await AsyncStorage.setItem('mexsRecent', JSON.stringify([]));
+  console.log('STOMP e MQTT disconnessi manualmente');
 }
 
-// Fa un fetch fresco dell'area e riscrive "currArea": usata sia all'ingresso in una
-// nuova area (con notifica se già in DANGER) sia a ogni evento live ricevuto mentre
-// si è già dentro un'area, altrimenti la pillola di stato resta congelata al valore
-// letto al momento dell'ingresso.
 async function refreshCurrentAreaFromServer(areaId, { notifyIfDanger } = {}) {
   if (!areaId) return;
   try {
