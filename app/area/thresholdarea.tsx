@@ -9,14 +9,12 @@ export default function ThresholdScreen(){
     const [id,setId] = useState("")
     const [temperature,setTemperature] = useState(0.0)
     const [humidity,setHumidity] = useState(0.0)
-    const [danger,setDanger] = useState(0.0)
     const endpointOS = API_BASE_URL+API_PORT_OS
     const getArea = async () =>{
         const area = JSON.parse(await AsyncStorage.getItem("infoArea"))
         setId(area.id)
         setTemperature(area.thresholdTemperature);
         setHumidity(area.thresholdHumidity);
-        setDanger(area.dangerIndexThreshold);
     }
     useEffect(()=>{
         getArea()
@@ -29,7 +27,6 @@ export default function ThresholdScreen(){
         const body = {
             "thresholdTemperature": temperature,
             "thresholdHumidity": humidity,
-            "dangerIndexThreshold": danger
         }
         const url = endpointOS+'/api/areas/'+id+'/thresholds'
         try{
@@ -58,8 +55,6 @@ export default function ThresholdScreen(){
             <TextInput  style={styles.input} keyboardType="decimal-pad" value={temperature.toString()} onChangeText={(text) => setTemperature(parseFloat(text) || 0)} />
             <Text style={styles.text}>  Soglia umidità</Text>
             <TextInput  style={styles.input} keyboardType="decimal-pad" value={humidity.toString()} onChangeText={(text) => setHumidity(parseFloat(text) || 0)} />
-            <Text style={styles.text}>  Soglia pericolo</Text>
-            <TextInput  style={styles.input} keyboardType="decimal-pad" value={danger.toString()} onChangeText={(text) => setDanger(parseFloat(text) || 0)} />
             <View style={styles.buttonlist}>
                 <TouchableOpacity style={styles.buttonlog} onPress={handleCancel}>
                     <Text style={styles.textbutton}>Annulla</Text>

@@ -135,7 +135,7 @@ export function switchAreaSubscription(idArea) {
   AsyncStorage.setItem('mexsLive', JSON.stringify([]));
   AsyncStorage.setItem('mexsRecent', JSON.stringify([]));
 
-  refreshCurrentAreaFromServer(idArea, { notifyIfDanger: true });
+  refreshCurrentAreaFromServer(idArea);
 }
 
 export function clearAreaSubscription() {
@@ -165,7 +165,7 @@ function onPersonalMessage(message) {
   const type = mex.type;
   switch (type) {
     case 'TASK_ASSIGNED':
-      inviaNotifica('Nuova task', 'Hai una nuova task', true);
+      inviaNotifica('Nuova task', 'Hai una nuova task', false);
 
       getAuthorizedAreas();
       break;
@@ -356,7 +356,7 @@ export async function disconnectStomp() {
   console.log('STOMP e MQTT disconnessi manualmente');
 }
 
-async function refreshCurrentAreaFromServer(areaId, { notifyIfDanger } = {}) {
+async function refreshCurrentAreaFromServer(areaId) {
   if (!areaId) return;
   try {
     const token = await AsyncStorage.getItem('token');
@@ -376,9 +376,6 @@ async function refreshCurrentAreaFromServer(areaId, { notifyIfDanger } = {}) {
     if (data.result === 0) {
       const area = data.areas.areasList[0];
       await AsyncStorage.setItem('currArea', JSON.stringify(area));
-      if (notifyIfDanger && area?.status === 99) {
-        inviaNotifica('PERICOLO AREA!', "PERICOLO RILEVATO, EVACUARE L'AREA!", true);
-      }
     }
   } catch (e) {
     console.log('Errore refreshCurrentAreaFromServer', e);

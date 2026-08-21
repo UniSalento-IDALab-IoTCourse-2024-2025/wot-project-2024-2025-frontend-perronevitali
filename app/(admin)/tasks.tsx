@@ -13,6 +13,9 @@ export default function TaksList(){
     const goToEvaluateTask = async () =>{
         router.replace("/activity/valutation")
     }
+    const goToTaskHistory = async () =>{
+        router.replace("/activity/taskhistory")
+    }
     return(
         <View style={styles.container}>
                 <Text style={styles.start}>Task</Text>
@@ -27,10 +30,18 @@ export default function TaksList(){
 
                       <List.Item
                         title="Valuta una task"
-                        style={styles.buttonInf}
+                        style={styles.buttonMid}
                         titleStyle={styles.modalText}
                         right={() => <List.Icon icon="chevron-right" />}
                         onPress={() => {goToEvaluateTask()}}
+                      />
+
+                      <List.Item
+                        title="Task completate e rifiutate"
+                        style={styles.buttonInf}
+                        titleStyle={styles.modalText}
+                        right={() => <List.Icon icon="chevron-right" />}
+                        onPress={() => {goToTaskHistory()}}
                       />
                 </List.Section>
        </View>
@@ -45,6 +56,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor:'#ffa420'
   },
+   button:{
+    justifyContent: 'center',
+    alignItems:'center',
+    backgroundColor:'#ff4700',
+    height: 60,
+    width:200,
+    borderRadius:15
+  },
+  textbutton:{
+    fontSize:18,
+    fontWeight: 'bold',
+    color:'white'
+},
   start:{
       fontSize: 30,
       fontWeight: 'bold',
@@ -83,21 +107,12 @@ const styles = StyleSheet.create({
       fontWeight: 'bold',
       color: 'white'
   },
-  button:{
-      justifyContent: 'center',
-      alignItems:'center',
-      backgroundColor:'#ff4700',
-      height: 60,
-      width:200,
-      borderRadius:15
-  },
   buttonCenter:{
     justifyContent: 'center',
     alignItems:'center',
     backgroundColor:'gold',
     height: 60,
     width:300,
-    //borderRadius:15
   },
   buttonSup:{
       justifyContent: 'center',
@@ -107,6 +122,13 @@ const styles = StyleSheet.create({
       width:300,
       borderTopLeftRadius: 15,
       borderTopRightRadius: 15,
+  },
+  buttonMid:{
+      justifyContent: 'center',
+      alignItems:'center',
+      backgroundColor:'gold',
+      height: 60,
+      width:300,
   },
   buttonInf:{
       justifyContent: 'center',
@@ -132,12 +154,6 @@ const styles = StyleSheet.create({
       fontSize: 14,
       color: '#cfcfcf',
       marginTop: 4,
-  },
-
-  textbutton:{
-    fontSize:18,
-    fontWeight: 'bold',
-    color:'white'
   },
   rightContainer: {
       alignItems: 'flex-end',
@@ -179,7 +195,6 @@ const styles = StyleSheet.create({
     },
   modalOverlay: {
         flex: 1,
-        //backgroundColor: 'rgba(0, 0, 0, 0.5)',
         justifyContent: 'flex-end',
     },
     modalContent: {

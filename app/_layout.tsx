@@ -1,24 +1,27 @@
-import {useEffect} from "react";
+import {useEffect, useRef} from "react";
+import { AppState } from 'react-native';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
-
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
-
 import { useColorScheme } from '@/hooks/use-color-scheme';
+
+let isAppForeground = AppState.currentState === 'active';
+AppState.addEventListener('change', (nextState) => {
+  isAppForeground = nextState === 'active';
+});
+
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
-      shouldShowBanner: true,
-      shouldShowList: true,
-      shouldPlaySound: true,
+      shouldShowBanner: !isAppForeground,
+      shouldShowList: !isAppForeground,
+      shouldPlaySound: !isAppForeground,
       shouldSetBadge: false,
     }),
   });
-
 export default function RootLayout() {
   const colorScheme = useColorScheme();
-
     useEffect(() => {
         Notifications.setNotificationChannelAsync('default', {
           name: 'Default',
@@ -43,6 +46,7 @@ export default function RootLayout() {
          <Stack.Screen name="activity/inspection" options={{ headerShown: false }}/>
          <Stack.Screen name="activity/maintenance" options={{ headerShown: false }}/>
          <Stack.Screen name="activity/externopt" options={{ headerShown: false }}/>
+          <Stack.Screen name="activity/taskhistory" options={{ headerShown: false }}/>
          <Stack.Screen name="activity/valutation" options={{ headerShown: false }}/>
          <Stack.Screen name="activity/loading/loaditem" options={{ headerShown: false }}/>
          <Stack.Screen name="activity/loading/loadinstore" options={{ headerShown: false }}/>

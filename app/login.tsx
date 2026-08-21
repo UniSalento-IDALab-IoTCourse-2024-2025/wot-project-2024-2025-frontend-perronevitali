@@ -16,6 +16,11 @@ export default function LoginScreen() {
   const getExpoToken = async () =>{
       let token;
        try {
+          const { status: permStatus } = await Notifications.requestPermissionsAsync();
+          if (permStatus !== 'granted') {
+            console.log("Permessi notifiche negati");
+            return null;
+          }
           const projectId =
             Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
           if (!projectId) {
@@ -30,10 +35,33 @@ export default function LoginScreen() {
           ).data;
           console.log("The token",token);
         } catch (e) {
-          token = `${e}`;
-          console.log("Errore token",token)
+          console.log("Errore token",e)
+          return null;
         }
+      return token;
   }
+
+  const registerPushToken = async(authToken,userId) =>{
+      try{
+          const expoToken = await getExpoToken();
+          if(!expoToken) return;
+          const url = endpoint+"/api/users/"+userId+"/push-token"
+          const response = await fetch(url,{
+              method: 'PUT',
+              headers:{
+                  'Content-Type': 'application/json',
+                  'Authorization': 'Bearer '+authToken
+              },
+              body: JSON.stringify({ pushToken: expoToken })
+          })
+          if(!response.ok){
+              console.log(response.status,": api/users/push-token")
+          }
+      }catch(e){
+          console.log("Errore registrazione push token",e)
+      }
+  }
+
   const getAuthorizedAreas = async(token,emailUser) =>{
          try{
              const url = endpoint+"/api/workers/email?email="+emailUser
@@ -87,7 +115,6 @@ export default function LoginScreen() {
                  if(token){
                      //console.log(token)
                      seeUser(token,username)
-                     getExpoToken()
                      await AsyncStorage.setItem("token",token)
                  }
              }
@@ -114,6 +141,7 @@ export default function LoginScreen() {
               const data = await response.json()
               const loggedUser = data.users.usersList[0]
               await AsyncStorage.setItem('user',JSON.stringify(loggedUser))
+              registerPushToken(token,loggedUser.id)
               if(loggedUser.role==="WORKER"){
                   await AsyncStorage.setItem('userRole', 'worker')
                   getAuthorizedAreas(token,emailUser)
