@@ -22,7 +22,6 @@ export default function NewArea(){
     const [port,setPort] = useState(0)
     const [temperature,setTemperature] = useState(0)
     const [humidity,setHumidity] = useState(0)
-    const [danger,setDanger] = useState(0)
     const handleCancel = async () =>{
         router.push("/")
     }
@@ -31,8 +30,9 @@ export default function NewArea(){
         const ipAddress = ip1+"."+ip2+"."+ip3+"."+ip4
         const macAddress = mac1+":"+mac2+":"+mac3+":"+mac4+":"+mac5+":"+mac6
         console.log(ipAddress,macAddress)
-        if(ipAddress==="0.0.0.0" || macAddress===":::::" || (name==="" || name===null) || (port===0) || (temperature===0) || (humidity===0) ||(danger===0)){
+        if(ipAddress==="0.0.0.0" || macAddress===":::::" || (name==="" || name===null) || (port===0) || (temperature===0) || (humidity===0)){
             alert("Inserisci i dati")
+            return
         }
         const url = endpointOS+"/api/areas/"
         const body = {
@@ -40,7 +40,6 @@ export default function NewArea(){
             "beaconMAC": macAddress,
             "thresholdTemperature": temperature,
             "thresholdHumidity": humidity,
-            "dangerIndexThreshold": danger,
             "ipRaspberry": ipAddress,
             "raspberryPort": port
         }
@@ -125,8 +124,6 @@ export default function NewArea(){
                 <TextInput  style={styles.input} keyboardType="number-pad" value={temperature} onChangeText={setTemperature}/>
                 <Text style={styles.text}>  Soglia umidità</Text>
                 <TextInput  style={styles.input} keyboardType="number-pad" value={humidity} onChangeText={setHumidity}/>
-                <Text style={styles.text}>  Soglia pericolo</Text>
-                <TextInput  style={styles.input} keyboardType="number-pad" value={danger} onChangeText={setDanger}/>
                 <View style={styles.buttonlist}>
                     <TouchableOpacity style={styles.buttonlog} onPress={handleCancel}>
                         <Text style={styles.textbutton}>Annulla</Text>

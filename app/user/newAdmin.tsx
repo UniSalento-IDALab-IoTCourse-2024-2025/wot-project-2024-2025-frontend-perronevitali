@@ -22,10 +22,14 @@ export default function CreateAdmin () {
         router.push("/")
     }
     const handleRegistration = async () =>{
-        if((nome==="" || nome===null) || (cognome==="" || cognome===null) || (email==="" || email===null) || (password==="" || password===null) || (confirm==="" || confirm===null))
+        if((nome==="" || nome===null) || (cognome==="" || cognome===null) || (email==="" || email===null) || (password==="" || password===null) || (confirm==="" || confirm===null)){
             alert("Per favore riempi tutti i campi!")
-        if(password!==confirm)
+            return
+        }
+        if(password!==confirm){
             alert("Le 2 password non corrispondono!")
+            return
+        }
         let managed = []
         if(!selected)
             alert("Seleziona un area!")

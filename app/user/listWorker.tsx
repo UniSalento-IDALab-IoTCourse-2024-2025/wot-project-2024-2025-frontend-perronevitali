@@ -11,6 +11,7 @@ export default function ListWorker(){
     const endpointOS = API_BASE_URL+API_PORT_OS
     const [workers,setWorkers] = useState([])
     const [selectedWorkers, setSelectedWorkers] = useState<number[]>([])
+    const [isModalWaitVisible,setModalWaitVisible] = useState(false)
     const toggleWorker = (id: number) => {
         if (selectedWorkers.includes(id)) {
             setSelectedWorkers(selectedWorkers.filter(w => w !== id))
@@ -22,6 +23,7 @@ export default function ListWorker(){
         router.replace("/")
     }
     const addNewTask = async (token,bodyTask) => {
+        setModalWaitVisible(true)
         const url = endpointOS+'/api/tasks/evaluate'
         try{
             const response = await fetch(url,{
@@ -37,6 +39,7 @@ export default function ListWorker(){
             }else{
                 const data = await response.json()
                 if(data.result===0){
+                  setModalWaitVisible(false)
                   alert(data.message)
                   router.replace("/")
                 }
@@ -143,6 +146,18 @@ export default function ListWorker(){
                     </TouchableOpacity>
                 </View>
             </ScrollView>
+             <Modal
+                visible={isModalWaitVisible}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setModalWaitVisible(false)}
+             >
+                 <View style={styles.modalWaitOverlay}>
+                 <View style={styles.modalWait}>
+                    <Text style={styles.infoText}>Valutazione task in corso...</Text>
+                </View>
+                </View>
+            </Modal>
         </View>
     )
 
@@ -335,4 +350,16 @@ const styles = StyleSheet.create({
       position: 'relative',
       //justifyContent: 'space-between',
   },
+        modalWaitOverlay: {
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        },
+       modalWait: {
+           width: '85%',
+           backgroundColor: '#2c2e52',
+           borderRadius: 12,
+           padding: 20,
+       },
 });

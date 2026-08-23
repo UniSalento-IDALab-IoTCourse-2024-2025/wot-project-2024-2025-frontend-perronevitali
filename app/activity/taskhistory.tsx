@@ -248,7 +248,7 @@ export default function TaskHistoryScreen() {
                             <Divider style={{ backgroundColor: '#ffa420', marginVertical: 1, width: "30%", alignSelf: 'center', height: 5 }} />
                             <Divider style={{ backgroundColor: '#ccc', marginVertical: 10 }} />
                             <Text style={styles.modalText}>Tipo Operazione: <Text style={styles.infomodalText}>{getType(selectedTask?.operationType)}</Text></Text>
-                            <Text style={styles.modalText}>Descrizione: <Text style={styles.infomodalText}>{selectedTask?.descrizione}</Text></Text>
+                            <Text style={styles.modalText}>Descrizione: <Text style={styles.infomodalText}>{selectedTask?.riskDescription}</Text></Text>
                             <Text style={styles.modalText}>Esito: <Text style={styles.infomodalText}>{selectedTask && isFullyRejected(selectedTask) ? "RIFIUTATA DA TUTTI I WORKER" : "COMPLETATA"}</Text></Text>
                             {selectedTask?.rejectedByWorkerIds?.length > 0 && (
                                 <Text style={styles.modalText}>

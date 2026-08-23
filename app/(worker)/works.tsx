@@ -154,6 +154,7 @@ export default function WorksScreen() {
        <View style={styles.container}>
             <ScrollView
                 style={{backgroundColor:'#ffa420'}}
+                contentContainerStyle={{ paddingBottom: 60 }}
             >
             <Text style={styles.start}>Le tue task </Text>
                    {works.map((work,key)=>
@@ -238,6 +239,7 @@ const styles = StyleSheet.create({
     //flexDirection: 'row',
     alignItems: 'left',
     justifyContent: 'space-between',
+
   },
   start:{
       fontSize: 24,

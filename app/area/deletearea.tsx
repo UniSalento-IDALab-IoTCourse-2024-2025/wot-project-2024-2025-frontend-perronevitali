@@ -61,7 +61,6 @@ export default function DeleteAreaScreen(){
                 <Text style={styles.textbutton}>Porta Rasperry: <Text style={styles.infoText}>{areaToDel?.raspberryPort}</Text></Text>
                 <Text style={styles.textbutton}>Soglia Temperatura: <Text style={styles.infoText}>{areaToDel?.thresholdTemperature} °C</Text></Text>
                 <Text style={styles.textbutton}>Soglia Umidità: <Text style={styles.infoText}>{areaToDel?.thresholdHumidity} %</Text></Text>
-                <Text style={styles.textbutton}>Soglia Pericolo: <Text style={styles.infoText}>{areaToDel?.dangerIndexThreshold}</Text></Text>
             </View>
             <View style={styles.buttonlist}>
                 <TouchableOpacity style={styles.buttonlog} onPress={handleCancel}>

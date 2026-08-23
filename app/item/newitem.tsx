@@ -153,14 +153,19 @@ export default function NewItemScreen(){
         router.push("/")
     }
     const addItem = async () =>{
-        if((nome===null || nome==="") || (selectedSub===null || selectedSub==="") || (selectedArea===null || selectedArea==="") || (quantity===null || quantity==="") || (unit===null || unit===""))
+        if((nome===null || nome==="") || (selectedSub===null || selectedSub==="") || (selectedArea===null || selectedArea==="") || (quantity===null || quantity==="") || (unit===null || unit==="")){
             alert("Per favore inserisci tutti i campi!")
+            return
+        }
         const subChoise = substances.find(({nome})=>nome===selectedSub)
         const areaChoise = areas.find(({name})=>name===selectedArea)
-        if(!subChoise)
+        if(!subChoise){
             alert("Sostanza non trovata!")
-        if(!areaChoise)
+            return
+        }
+        if(!areaChoise){
             alert("Area non trovata!")
+        }
         else{
             const token = await AsyncStorage.getItem("token")
             const url = endpointOS+'/api/items/'

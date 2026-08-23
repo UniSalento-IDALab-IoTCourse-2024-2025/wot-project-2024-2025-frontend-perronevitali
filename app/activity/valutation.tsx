@@ -433,4 +433,5 @@ const styles = StyleSheet.create({
           alignSelf: 'right',
           color: '#ffa420',
   },
+
 });

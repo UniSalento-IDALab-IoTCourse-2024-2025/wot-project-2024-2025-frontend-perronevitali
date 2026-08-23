@@ -7,19 +7,15 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
-let isAppForeground = AppState.currentState === 'active';
-AppState.addEventListener('change', (nextState) => {
-  isAppForeground = nextState === 'active';
-});
 
 Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowBanner: !isAppForeground,
-      shouldShowList: !isAppForeground,
-      shouldPlaySound: !isAppForeground,
-      shouldSetBadge: false,
-    }),
-  });
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 export default function RootLayout() {
   const colorScheme = useColorScheme();
     useEffect(() => {

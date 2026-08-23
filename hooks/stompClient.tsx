@@ -189,11 +189,12 @@ function onAreaMqttMessage(message) {
 async function handleAreaEvent(type, payload, timestamp, retained) {
   const user = JSON.parse(await AsyncStorage.getItem('user'));
   const display = buildDisplayMessage(type, payload, timestamp, user?.id);
+  console.log(display)
   if (!display) return;
-
+  console.log(retained)
   if (retained) {
     await appendRecentMessage(display);
-    return;
+    return
   }
 
   notifyForEvent(type, display);
