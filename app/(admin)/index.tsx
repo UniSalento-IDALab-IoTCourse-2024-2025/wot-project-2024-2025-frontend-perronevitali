@@ -167,7 +167,7 @@ export default function AdminHome () {
             }}
             >
                 {managedAreas?.map((managed,key)=>
-                    <TouchableOpacity style={styles.boxAreaAuth} key={key}>
+                    <View style={styles.boxAreaAuth} key={key}>
                         <Text style={styles.message}> {managed?.name} </Text>
                         <Text style={styles.textbutton}> Stato area: {getStatusString(managed?.status)}</Text>
                         <Text style ={styles.textbutton}> Numero di lavoratori : {managed?.userIdsInArea?.length}</Text>
@@ -181,7 +181,7 @@ export default function AdminHome () {
                                 <Button title="Opzioni Area" color="#ffa420" onPress={()=>{goToOption(managed)}}/>
                             </View>
                         </View>
-                    </TouchableOpacity>
+                    </View>
                 )}
                 <Modal
                     visible={isModalVisible}

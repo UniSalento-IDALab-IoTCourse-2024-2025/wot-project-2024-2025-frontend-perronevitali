@@ -184,7 +184,7 @@ export default function TaskHistoryScreen() {
         <View style={styles.container}>
             <ScrollView
                 style={{ backgroundColor: '#ffa420' }}
-                contentContainerStyle={{ flexGrow: 1 }}
+               // contentContainerStyle={{ flexGrow: 1 }}
             >
                 <Text style={styles.start}>Task completate e rifiutate</Text>
 

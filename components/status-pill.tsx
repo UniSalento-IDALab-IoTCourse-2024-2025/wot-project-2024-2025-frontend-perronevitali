@@ -10,7 +10,7 @@ export default function StatusPill() {
 
   const loadArea = async () => {
     const raw = await AsyncStorage.getItem('currArea');
-    setCurrentArea(raw ? JSON.parse(raw) : null);
+    setCurrentArea(JSON.parse(raw));
   };
 
   useEffect(() => {
