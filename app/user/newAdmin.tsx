@@ -11,7 +11,7 @@ export default function CreateAdmin () {
     const endpointOS = API_BASE_URL+API_PORT_OS
     const [areaNames,setAreaNames] = useState([])
     const [areas,setAreas] = useState([])
-    const [selected,setSelected] = useState([])
+    const [selected,setSelected] = useState("")
     const [managed,setManaged] =  useState(null)
     const [nome,setNome] = useState("")
     const [cognome,setCognome] = useState("")
@@ -31,8 +31,10 @@ export default function CreateAdmin () {
             return
         }
         let managed = []
-        if(!selected)
+        if(!selected){
             alert("Seleziona un area!")
+            return
+        }
         if(selected==="Tutte")
              managed=null
         else{

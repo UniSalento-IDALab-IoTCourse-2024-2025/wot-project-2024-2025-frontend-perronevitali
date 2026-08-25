@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Label, Text, TextInput, StyleSheet, TouchableOpacity,Button } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity,Button } from 'react-native';
 import { Divider } from 'react-native-elements';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -145,10 +145,10 @@ export default function LoginScreen() {
               if(loggedUser.role==="WORKER"){
                   await AsyncStorage.setItem('userRole', 'worker')
                   getAuthorizedAreas(token,emailUser)
-                  router.push('/')
+                  router.replace('/')
               }else if(loggedUser.role==="ADMIN"){
                   await AsyncStorage.setItem('userRole', 'admin')
-                  router.push('/')
+                  router.replace('/')
               }else{
                   console.log("Role unknow")
              }

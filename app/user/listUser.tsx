@@ -52,7 +52,7 @@ export default function ListUser(){
                     if(noAuthWorkers===null || noAuthWorkers===undefined)
                         return styles.boxAreaAuth
                     else
-                        for(let i=0;i<noAuthWorkers.lenght;i++){
+                        for(let i=0;i<noAuthWorkers.length;i++){
                             if(user.id===noAuthWorkers[i])
                                 return styles.boxAreaAuthNot
                         }

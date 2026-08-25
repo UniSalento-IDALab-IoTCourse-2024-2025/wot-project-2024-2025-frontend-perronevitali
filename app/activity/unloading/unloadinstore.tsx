@@ -1,7 +1,6 @@
 import { useState,useEffect,useRef } from 'react';
 import { View,Platform,ScrollView, Text, TextInput, StyleSheet, TouchableOpacity,Button,Modal } from 'react-native';
-import {Divider} from "react-native-elements";
-import {SelectList} from 'react-native-dropdown-select-list';
+import { RadioButton } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL,API_PORT_OS,API_PORT_US } from '@/constants/api';
@@ -10,104 +9,24 @@ export default function UnloadInStoreScreen(){
     const ACTION = "UNLOADING"
     const router = useRouter()
     const endpointOS = API_BASE_URL+API_PORT_OS
-    const [managed,setManaged] = useState("")
-    const [areasName,setAreaNames] = useState([])
-    const [areas,setAreas] = useState([])
-    const [storesName,setStoreName] = useState([])
     const [stores,setStores] = useState([])
-    const [start,setStart] = useState("")
-    const [store,setStore] = useState("")
-    const [selectableStores,setSelecatable] = useState([])
-    const [selectableNames,setSelecatableNames] = useState([])
+    const [areas,setAreas] = useState([])
+    const [managedId,setManagedId] = useState([])
+    const [selectedItem, setSelectedItem] = useState<number | null>(null);
     const [quantity,setQuantity] = useState("")
-    const fetchData = async () =>{
-        getStores()
-        const managed = JSON.parse(await AsyncStorage.getItem("managedId"))
-        setManaged(managed)
-        if(managed){
-            const area =await getArea(managed)
-            const body={
-                "id": area.id,
-                "name": area.name
-            }
-            setAreas([body])
-            setAreaNames([area.name])
-        }else
-            getAreas()
-    }
     const getStores = async () =>{
         const token = await AsyncStorage.getItem("token")
         const user = JSON.parse(await AsyncStorage.getItem("user"))
         const area = JSON.parse(await AsyncStorage.getItem("managedId"))
+        setManagedId(area)
         if(area){
             getStoresArea(token,area)
         }else{
             getAllStores(token)
+            getAreas(token)
         }
     }
-    const getStoresArea = async (token,area) =>{
-        const url = endpointOS+'/api/items?areaId='+area
-        let itemArea = []
-        try{
-            const response = await fetch(url,{
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer '+token
-                }
-            })
-            if(!response.ok){
-                console.log("Errore",response.status)
-            }else{
-                const data = await response.json()
-                const itemsList = data.items.itemsList
-                let items=[]
-                let names=[]
-                for(let item in itemsList){
-                    if(itemsList[item].deposito){
-                        items.push(itemsList[item])
-                        names.push(itemsList[item].nome)
-                    }
-                }
-                setStores(items)
-                //setSelecatable(items)
-                setStoreName(names)
-                //setSelecatableNames(names)
-            }
-        }catch(e){
-            console.log("Errore ",e)
-        }
-    }
-    const getArea = async (managed) =>{
-        const token =  await AsyncStorage.getItem("token")
-        const url = endpointOS+'/api/areas/'+managed
-        try{
-            const response = await fetch(url,{
-                method: 'GET',
-                headers:{
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer '+token
-                }
-            })
-            if(!response.ok){
-                console.log("Errore /api/areas/"+managed,response.status)
-                return null
-            }else{
-                const data = await response.json()
-                if(data.result===0){
-                    const area = data.areas.areasList[0]
-                    return area
-                }else{
-                    return null
-                }
-            }
-        }catch(e){
-            console.log("Errore chiamata  API /api/areas/:"+managed,e)
-            return null
-        }
-    }
-
-    const getAreas = async () =>{
-        const token =  await AsyncStorage.getItem("token")
+     const getAreas = async (token) =>{
         const url = endpointOS+'/api/areas/'
         try{
             const response = await fetch(url,{
@@ -134,15 +53,14 @@ export default function UnloadInStoreScreen(){
                     names.push(name)
                     areasobj.push(bodyArea)
                 }
-                setAreaNames(names)
                 setAreas(areasobj)
             }
         }catch(e){
-            console.log("Errore ",url,":",e)
+         console.log("Errore ",url,":",e)
         }
     }
     const getAllStores = async (token) =>{
-        const url = endpointOS+'/api/items/'
+        const url = endpointOS+"/api/items/"
         try{
             const response = await fetch(url,{
                 method: 'GET',
@@ -156,72 +74,112 @@ export default function UnloadInStoreScreen(){
             }else{
                 const data = await response.json()
                 const itemsList = data.items.itemsList
-                let stores = []
-                let storesName = []
-                for(let item in itemsList){
-                    if(itemsList[item].deposito){
-                        storesName.push(itemsList[item].nome)
-                        stores.push(itemsList[item])
-                    }
+                const stores = []
+                for(let store in itemsList){
+                    if(itemsList[store].deposito)
+                        stores.push(itemsList[store])
                 }
                 setStores(stores)
-                setStoreName(storesName)
             }
         }catch(e){
             console.log("Errore chiamata api",url,":",e)
         }
     }
-    useEffect(()=>{
-        fetchData()
-    },[])
-    useEffect(()=>{
-        const areaChoise = areas.find(({name})=>name===start)
-        let newstores=[]
-        let names=[]
-        for(let store in stores){
-            if(areaChoise.id===stores[store].areaId){
-                newstores.push(stores[store])
-                names.push(stores[store].nome)
+    const getStoresArea = async (token,area) =>{
+        const url = endpointOS+'/api/items?areaId='+area
+        let storeArea = []
+        try{
+            const response = await fetch(url,{
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+token
+                }
+            })
+            if(!response.ok){
+                console.log("Errore",response.status)
+            }else{
+                const data = await response.json()
+                const itemsList = data.items.itemsList
+                const items = []
+                for(let item in itemsList){
+                    if(itemsList[item].deposito)
+                        items.push(itemsList[item])
+                }
+                setStores(items)
             }
+        }catch(e){
+            console.log("Errore ",e)
         }
-        setSelecatable(newstores)
-        setSelecatableNames(names)
-    },[start])
-    const handleCancel = () =>{
+    }
+    useEffect(()=>{
+        getStores()
+    },[])
+    const getNameArea = (idArea) =>{
+        const areaChoise = areas.find(({id})=>id===idArea)
+        if(areaChoise)
+            return areaChoise.name
+    }
+    const handleCancel = async () =>{
         router.replace("/")
     }
     const handleProceed = async () =>{
-        if((start===null || start==="") || (store===null || store==="") || (quantity===null || quantity===""))
-            alert("Per favore compila tutti i campi!")
-        else{
-            const areaChoise = areas.find(({name})=>name===start)
-            const store = selectableStores.find(({name})=>name===store)
-            const bodyTask = {
-                "operationType": ACTION,
-                "itemId": store.id,
-                "originAreaId": null,
-                "destinationAreaId": store.areaId,
-                "substanceCas": store.substanceCas,
-                "substanceName": store.substanceName,
-                "workerIds": [],
-                "substanceQuantity": quantity
+            if(!selectedItem)
+                alert("Seleziona almeno un deposito!")
+            else if(quantity===null || quantity==="")
+                alert("Inserisci la quantità da scaricare!")
+            else{
+                const store = stores.find(({id})=>id===selectedItem)
+                const requestedQuantity = Number(quantity)
+                if(isNaN(requestedQuantity) || requestedQuantity<=0)
+                    alert("La quantità deve essere un numero maggiore di zero!")
+                else{
+                    const bodyTask = {
+                        "operationType": ACTION,
+                        "itemId": selectedItem,
+                        "originAreaId": null,
+                        "destinationAreaId": store.areaId,
+                        "substanceCas": store.substanceCas,
+                        "substanceName": store.substanceName,
+                        "workerIds": [],
+                        "substanceQuantity": requestedQuantity
+                    }
+                    await AsyncStorage.setItem("bodyTask",JSON.stringify(bodyTask))
+                    await AsyncStorage.setItem("typeUnloading","store")
+                    router.replace("/user/listWorker")
+                }
             }
-            await AsyncStorage.setItem("typeUnloading","store")
-            await AsyncStorage.setItem("bodyTask",JSON.stringify(bodyTask))
-            router.replace("/user/listWorker")
-        }
     }
     return(
         <View style={styles.container}>
-            <Text style={styles.start}>Scarica in un deposito </Text>
-            <View>
-                <Text style={styles.text}> Area di partenza</Text>
-                <SelectList data={areasName} style={{width:500, height:500, marginVertical:10}} boxStyles={{backgroundColor:'white'}} placeholder="Seleziona un' area" value={start} setSelected={setStart} save='key'/>
-                <Text style={styles.text}> Deposito</Text>
-                <SelectList data={selectableNames} style={{width:500, height:500, marginVertical:10}} boxStyles={{backgroundColor:'white'}} placeholder="Seleziona un deposito" value={store} setSelected={setStore} save='key'/>
-                <Text style={styles.text}> Quantità</Text>
-                <TextInput style={styles.input} value={quantity} onChangeText={setQuantity} keyboardType="number-pad" />
-            </View>
+            <ScrollView style={{backgroundColor:'#ffa420'}}>
+            <Text style={styles.start}>Scarica in un deposito</Text>
+            {stores.map((store,key)=>
+                <View style={styles.boxMessage} key={key}>
+                    <Text style={styles.message}>Nome:<Text style={styles.infoText}>{store?.nome}</Text></Text>
+                    <Text style={styles.message}>Sostanza:<Text style={styles.infoText}>{store?.substanceName} </Text></Text>
+                    <Text style={styles.message}>Quantità:<Text style={styles.infoText}>{store?.quantity} {store?.unit}</Text></Text>
+                    {!managedId ? (
+                        <Text style={styles.message}>
+                            Area:<Text style={styles.infoText}>{getNameArea(store?.areaId)}</Text>
+                        </Text>
+                    ) : null}
+                    <View style={styles.radioContainer}>
+                        <RadioButton
+                            value={String(store.id)}
+                            status={selectedItem === store.id ? 'checked' : 'unchecked'}
+                            onPress={() => setSelectedItem(store.id)}
+                            color="white"
+                            uncheckedColor="white"
+                        />
+                    </View>
+                </View>
+            )}
+            {selectedItem ? (
+                <View style={{alignSelf:"center"}}>
+                    <Text style={styles.message}>Quantità da scaricare</Text>
+                    <TextInput style={styles.input} value={quantity} onChangeText={setQuantity} keyboardType="number-pad" />
+                </View>
+            ) : null}
             <View style={styles.buttonlist}>
                 <TouchableOpacity style={styles.buttonlog} onPress={handleCancel}>
                     <Text style={styles.textbutton}>Annulla</Text>
@@ -230,17 +188,17 @@ export default function UnloadInStoreScreen(){
                     <Text style={styles.textbutton}>Procedi</Text>
                 </TouchableOpacity>
             </View>
+            </ScrollView>
         </View>
     )
-
-
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor:'#ffa420'
+    backgroundColor:'#ffa420',
   },
   start:{
       fontSize: 30,
@@ -252,6 +210,7 @@ const styles = StyleSheet.create({
       marginLeft: 10,
   },
   boxAreaAuth: {
+      flex: 1,
       width: 340,
       marginTop: 10,
       marginBottom: 10,
@@ -275,13 +234,8 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         position: 'relative'
     },
-    text:{
-            fontSize: 18,
-            fontWeight: 'bold',
-            color: 'white',
-     },
   message:{
-      fontSize: 24,
+      fontSize: 18,
       fontWeight: 'bold',
       color: 'white'
   },
@@ -298,7 +252,7 @@ const styles = StyleSheet.create({
     alignItems:'center',
     backgroundColor:'red',
     height: 60,
-    width:125,
+    width:140,
     marginRight:10,
     borderRadius:15
   },
@@ -307,11 +261,8 @@ const styles = StyleSheet.create({
       alignItems:'center',
       backgroundColor:'green',
       height: 60,
-      width: 125,
-      marginTop:10,
-      marginBottom:10,
+      width:140,
       marginLeft:10,
-      marginRight:10,
       borderRadius:15
   },
   textContainer: {
@@ -406,10 +357,24 @@ const styles = StyleSheet.create({
         right: 10,
     },
     infoText:{
-        fontSize: 24,
+        fontSize: 20,
         fontWeight: 'bold',
         alignItems: 'right',
         alignSelf: 'right',
         color: '#ffa420',
     },
+    boxMessage: {
+          width: 340,
+          marginTop: 10,
+          marginBottom: 10,
+          alignSelf:"center",
+          padding: 10,
+          backgroundColor: '#2c2e52',
+          borderRadius: 10,
+      },
+      message:{
+          fontSize: 20,
+          fontWeight: 'bold',
+          color: 'white'
+      },
 });

@@ -1,5 +1,5 @@
 import { useState,useEffect,useRef } from 'react';
-import { View,Platform,ScrollView, Text, StyleSheet, TouchableOpacity,Button,Modal } from 'react-native';
+import { View,Platform,ScrollView, Text, TextInput, StyleSheet, TouchableOpacity,Button,Modal } from 'react-native';
 import { RadioButton } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -13,6 +13,7 @@ export default function LoadInStoreScreen(){
     const [areas,setAreas] = useState([])
     const [managedId,setManagedId] = useState([])
     const [selectedItem, setSelectedItem] = useState<number | null>(null);
+    const [quantity,setQuantity] = useState("")
     const getStores = async () =>{
         const token = await AsyncStorage.getItem("token")
         const user = JSON.parse(await AsyncStorage.getItem("user"))
@@ -124,20 +125,30 @@ export default function LoadInStoreScreen(){
     const handleProceed = async () =>{
             if(!selectedItem)
                 alert("Seleziona almeno un item!")
+            else if(quantity===null || quantity==="")
+                alert("Inserisci la quantità da caricare!")
             else{
                 const store = stores.find(({id})=>id===selectedItem)
-                const bodyTask = {
-                    "operationType": ACTION,
-                    "itemId": selectedItem,
-                    "originAreaId": store.areaId,
-                    "destinationAreaId": null,
-                    "substanceCas": store.substanceCas,
-                    "substanceName": store.substanceName,
-                    "workerIds": []
+                const requestedQuantity = Number(quantity)
+                if(isNaN(requestedQuantity) || requestedQuantity<=0)
+                    alert("La quantità deve essere un numero maggiore di zero!")
+                else if(requestedQuantity>store.quantity)
+                    alert("Quantità richiesta superiore alla giacenza disponibile ("+store.quantity+" "+store.unit+")!")
+                else{
+                    const bodyTask = {
+                        "operationType": ACTION,
+                        "itemId": selectedItem,
+                        "originAreaId": store.areaId,
+                        "destinationAreaId": null,
+                        "substanceCas": store.substanceCas,
+                        "substanceName": store.substanceName,
+                        "workerIds": [],
+                        "substanceQuantity": requestedQuantity
+                    }
+                    await AsyncStorage.setItem("bodyTask",JSON.stringify(bodyTask))
+                    await AsyncStorage.setItem("typeLoading","store")
+                    router.replace("/user/listWorker")
                 }
-                await AsyncStorage.setItem("bodyTask",JSON.stringify(bodyTask))
-                await AsyncStorage.setItem("typeLoading","store")
-                router.replace("/user/listWorker")
             }
     }
     return(
@@ -165,6 +176,12 @@ export default function LoadInStoreScreen(){
                     </View>
                 </View>
             )}
+            {selectedItem ? (
+                <View style={{alignSelf:"center"}}>
+                    <Text style={styles.message}>Quantità da caricare</Text>
+                    <TextInput style={styles.input} value={quantity} onChangeText={setQuantity} keyboardType="number-pad" />
+                </View>
+            ) : null}
             <View style={styles.buttonlist}>
                 <TouchableOpacity style={styles.buttonlog} onPress={handleCancel}>
                     <Text style={styles.textbutton}>Annulla</Text>

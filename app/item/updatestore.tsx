@@ -101,36 +101,38 @@ export default function UpdateStoreScreen(){
         }
      },[selectedStore])
     const handleUpdate = async () =>{
-        if((selectedStore===null || selectedStore==="") || (substance===null || substance==="") || (startQuantity==="" || startQuantity==="") || (unit===null || unit===""))
+        if((selectedStore===null || selectedStore==="") || (substance===null || substance==="") || (startQuantity==="" || startQuantity==="") || (unit===null || unit==="")){
             alert("Per favore seleziona un area!")
-        if(final===null || final==="")
+            return
+        }
+        if(final===null || final===""){
             alert("Seleziona la quantità finale!")
-        else{
-            const store = stores.find(({nome})=>nome===selectedStore)
-            store.quantity=final
-            const url = endpointOS+'/api/items/'+store.id
-            const token = await AsyncStorage.getItem("token")
-            try{
-                const response = await fetch(url,{
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer '+token
-                    },
-                    body: JSON.stringify(store)
-                })
-                if(!response.ok){
-                    console.log("Errore",response.status)
-                }else{
-                    const data = await response.json()
-                    if(data.result===0){
-                        alert("Aggiornamento quantità eseguito con suceesso!!")
-                        router.push("/")
-                    }
+            return
+        }
+        const store = stores.find(({nome})=>nome===selectedStore)
+        store.quantity=final
+        const url = endpointOS+'/api/items/'+store.id
+        const token = await AsyncStorage.getItem("token")
+        try{
+            const response = await fetch(url,{
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+token
+                },
+                body: JSON.stringify(store)
+            })
+            if(!response.ok){
+                console.log("Errore",response.status)
+            }else{
+                const data = await response.json()
+                if(data.result===0){
+                    alert("Aggiornamento quantità eseguito con suceesso!!")
+                    router.push("/")
                 }
-            }catch(e){
-                console.log("Errore",url,":",e)
             }
+        }catch(e){
+            console.log("Errore",url,":",e)
         }
     }
     return(

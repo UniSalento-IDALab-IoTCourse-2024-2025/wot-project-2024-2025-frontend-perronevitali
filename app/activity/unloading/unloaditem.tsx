@@ -148,7 +148,7 @@ export default function UnloadItemScreen(){
             const subChoise = substances.find(({nome})=>nome===selectedSub)
             const bodyItem ={
                 "substanceCas": subChoise.cas,
-                "substancesName": subChoise.nome,
+                "substanceName": subChoise.nome,
                 "nome": nameUn,
                 "quantity": quantity,
                 "unit": unit,

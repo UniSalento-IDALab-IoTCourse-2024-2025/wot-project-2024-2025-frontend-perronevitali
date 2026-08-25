@@ -1,5 +1,5 @@
 import { useState,useEffect,useRef } from 'react';
-import { View,Platform,ScrollView, Text, StyleSheet, TouchableOpacity,Button,Modal } from 'react-native';
+import { View,Platform,ScrollView, Text, StyleSheet, TouchableOpacity,Button,Modal,Alert } from 'react-native';
 import {SelectList} from 'react-native-dropdown-select-list';
 import {Divider} from "react-native-elements";
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -103,6 +103,16 @@ export default function InventoryScreen(){
             console.log("Errroe DELETE /api/items/id:",e)
         }
     }
+    const confirmDeleteItem = (id) =>{
+        Alert.alert(
+            "Conferma eliminazione",
+            "Sei sicuro di voler eliminare questo elemento?",
+            [
+                { text: "Annulla", style: "cancel" },
+                { text: "Elimina", style: "destructive", onPress: () => deleteItem(id) }
+            ]
+        )
+    }
     return(
         <View style={styles.container}>
         <ScrollView style={{backgroundColor:'#ffa420'}}>
@@ -124,7 +134,7 @@ export default function InventoryScreen(){
                             <Text style={styles.message}>Sostanza: <Text style={styles.infoText}>{store.substanceName}</Text></Text>
                             <Text style={styles.message}>Quantità: <Text style={styles.infoText}> {store.quantity} {store.unit} </Text></Text>
                         </View>
-                        <TouchableOpacity style={styles.boxAreaAuthNot} onPress={()=>{deleteItem(store.id)}}>
+                        <TouchableOpacity style={styles.boxAreaAuthNot} onPress={()=>{confirmDeleteItem(store.id)}}>
                             <EvilIcons name="trash" size={32} color="white" />
                         </TouchableOpacity>
                     </View>
@@ -138,7 +148,7 @@ export default function InventoryScreen(){
                             <Text style={styles.message}>Sostanza: <Text style={styles.infoText}>{item.substanceName}</Text></Text>
                             <Text style={styles.message}>Quantità: <Text style={styles.infoText}> {item.quantity} {item.unit} </Text></Text>
                         </View>
-                        <TouchableOpacity style={styles.boxAreaAuthNot} onPress={()=>{deleteItem(item.id)}}>
+                        <TouchableOpacity style={styles.boxAreaAuthNot} onPress={()=>{confirmDeleteItem(item.id)}}>
                             <EvilIcons name="trash" size={32} color="white" />
                         </TouchableOpacity>
                     </View>

@@ -48,8 +48,10 @@ export default function ShiftScreen() {
                 const data = await response.json()
                 const itemsList = data.items.itemsList
                 const items = []
-                for(let item in itemsList)
-                    items.push(itemsList[item])
+                for(let item in itemsList){
+                    if(!itemsList[item].deposito)
+                        items.push(itemsList[item])
+                }
                 setItems(items)
             }
         }catch(e){

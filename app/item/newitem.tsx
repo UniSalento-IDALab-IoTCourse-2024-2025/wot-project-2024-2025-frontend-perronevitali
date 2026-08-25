@@ -172,7 +172,7 @@ export default function NewItemScreen(){
             try{
                 const body ={
                     "substanceCas": subChoise.cas,
-                    "substancesName": subChoise.nome,
+                    "substanceName": subChoise.nome,
                     "nome": nome,
                     "quantity": quantity,
                     "unit": unit,

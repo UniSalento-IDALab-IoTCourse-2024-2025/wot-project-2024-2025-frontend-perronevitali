@@ -36,10 +36,11 @@ export default function ListWorker(){
             })
             if(!response.ok){
                 console.log("Errore",response.status)
+                setModalWaitVisible(false)
             }else{
                 const data = await response.json()
+                setModalWaitVisible(false)
                 if(data.result===0){
-                  setModalWaitVisible(false)
                   alert(data.message)
                   router.replace("/")
                 }
@@ -47,6 +48,7 @@ export default function ListWorker(){
             }
         }catch(e){
             console.log("Errore",e)
+            setModalWaitVisible(false)
         }
     }
     const  addNewItem = async (token,body) =>{
@@ -90,6 +92,9 @@ export default function ListWorker(){
                 if(typeUnloading==="item"){
                     const bodyItem = JSON.parse(await AsyncStorage.getItem("bodyItem"))
                     const response = await addNewItem(token,bodyItem)
+                    if(!response){
+                        return
+                    }
                     body.itemId = response.id
                }
             }
