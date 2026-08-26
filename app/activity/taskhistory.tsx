@@ -4,10 +4,11 @@ import { Divider } from "react-native-elements";
 import { SelectList } from 'react-native-dropdown-select-list';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import { API_BASE_URL, API_PORT_OS } from '@/constants/api';
+import { API_BASE_URL, API_PORT_OS, API_PORT_US } from '@/constants/api';
 
 export default function TaskHistoryScreen() {
     const endpointOS = API_BASE_URL + API_PORT_OS;
+    const endpointUS = API_BASE_URL + API_PORT_US;
     const [tasks, setTasks] = useState([]);
     const [selectedTask, setSelectedTask] = useState(null);
     const [isModalVisible, setModalVisible] = useState(false);
@@ -17,6 +18,7 @@ export default function TaskHistoryScreen() {
     const [areaNames, setAreaNames] = useState([]);
     const [areas, setAreas] = useState([]);
     const [selectedAreaName, setSelectedAreaName] = useState("");
+    const [workers, setWorkers] = useState([]);
     const router = useRouter();
 
     const fetchData = async () => {
@@ -28,6 +30,7 @@ export default function TaskHistoryScreen() {
         if (!managedId) {
             getAreas(currentToken);
         }
+        getWorkers(currentToken);
         const closed = await getClosedTasksByAdmin(currentToken, user.id);
         setTasks(closed);
     };
@@ -58,6 +61,27 @@ export default function TaskHistoryScreen() {
             }
             setAreaNames(names);
             setAreas(areasObj);
+        } catch (e) {
+            console.log("Errore", url, ":", e);
+        }
+    };
+
+    const getWorkers = async (currentToken) => {
+        const url = endpointUS + '/api/workers/';
+        try {
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + currentToken
+                },
+            });
+            if (!response.ok) {
+                console.log("Errore", url, ":", response.status);
+                return;
+            }
+            const data = await response.json();
+            setWorkers(data.workers.workersList || []);
         } catch (e) {
             console.log("Errore", url, ":", e);
         }
@@ -171,6 +195,13 @@ export default function TaskHistoryScreen() {
         return total > 0 && rejected === total;
     };
 
+    const getWorkerName = (workerId) => {
+        const worker = workers.find(({ id }) => id === workerId);
+        if (worker)
+            return worker.nome + " " + worker.cognome;
+        return workerId;
+    };
+
     const openModal = (task) => {
         setSelectedTask(task);
         setModalVisible(true);
@@ -251,14 +282,14 @@ export default function TaskHistoryScreen() {
                             <Text style={styles.modalText}>Descrizione: <Text style={styles.infomodalText}>{selectedTask?.riskDescription}</Text></Text>
                             <Text style={styles.modalText}>Esito: <Text style={styles.infomodalText}>{selectedTask && isFullyRejected(selectedTask) ? "RIFIUTATA DA TUTTI I WORKER" : "COMPLETATA"}</Text></Text>
                             {selectedTask?.rejectedByWorkerIds?.length > 0 && (
-                                <Text style={styles.modalText}>
-                                    Motivazioni: <Text style={styles.infomodalText}>
-                                        {selectedTask.rejectedByWorkerIds
-                                            .map(wid => selectedTask.rejectionReasons?.[wid])
-                                            .filter(Boolean)
-                                            .join(", ") || "Nessuna motivazione fornita"}
-                                    </Text>
-                                </Text>
+                                <View>
+                                    <Text style={styles.modalText}>Motivazioni:</Text>
+                                    {selectedTask.rejectedByWorkerIds.map((wid, key) => (
+                                        <Text style={styles.modalText} key={key}>
+                                            {getWorkerName(wid)}: <Text style={styles.infomodalText}>{selectedTask.rejectionReasons?.[wid] || "Nessuna motivazione fornita"}</Text>
+                                        </Text>
+                                    ))}
+                                </View>
                             )}
                         </View>
                     </View>
