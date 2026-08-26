@@ -63,7 +63,7 @@ export default function ActivitiesAreaScreen() {
         router.push("/")
     }
     return (
-        <ScrollView style={{backgroundColor:'#ffa420'}}>
+        <ScrollView style={{backgroundColor:'#ffa420'}} contentContainerStyle={{ paddingBottom: 60 }}>
             <Text style={styles.start}>Attività area {area?.name}</Text>
             <View style={styles.container}>
            {activites?.map((activity,key)=>

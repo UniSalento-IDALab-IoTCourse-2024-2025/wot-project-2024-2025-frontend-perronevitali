@@ -97,6 +97,7 @@ export default function InventoryScreen(){
             }else{
                 alert("Eliminazione eseguita con successo!")
                 getInventoryAreas()
+                setSelected('')
             }
 
         }catch(e){
@@ -115,7 +116,7 @@ export default function InventoryScreen(){
     }
     return(
         <View style={styles.container}>
-        <ScrollView style={{backgroundColor:'#ffa420'}}>
+        <ScrollView style={{backgroundColor:'#ffa420'}} contentContainerStyle={{ paddingBottom: 60 }}>
             <View style={styles.containerSup}>
                 <Text style={styles.start}>
                     Gestione Inventario{"\t"}{"\t"}{"\t"}

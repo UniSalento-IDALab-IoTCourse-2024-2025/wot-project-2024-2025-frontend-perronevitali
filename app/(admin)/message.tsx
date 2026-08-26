@@ -73,7 +73,7 @@ export default function MessageScreen() {
   );
 
   return (
-    <ScrollView style={{ backgroundColor: '#ffa420' }}>
+    <ScrollView style={{ backgroundColor: '#ffa420' }} contentContainerStyle={{ paddingBottom: 60 }}>
       <Text style={styles.start}>I tuoi messaggi</Text>
       <TouchableOpacity style={styles.buttonlog} onPress={() => router.push('/area/history')}>
         <Text style={styles.textbutton}>Vedi storico completo</Text>
