@@ -2,6 +2,7 @@ import { Client } from '@stomp/stompjs';
 import { Client as MqttClient } from 'react-native-paho-mqtt';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
 import { API_BASE_URL, API_PORT_OS, API_PORT_US } from '@/constants/api';
 
 let client = null;
@@ -12,13 +13,26 @@ const endpointOS = API_BASE_URL + API_PORT_OS;
 
 const AREA_SUBTOPICS = ['alert', 'unauthorized', 'danger'];
 
+// Un messaggio marcato "retained" non e' di per se' un messaggio vecchio: il
+// broker puo' consegnarlo con il flag attivo anche a un client gia' iscritto.
+// L'unico criterio affidabile per distinguere un evento appena accaduto da uno
+// storico e' il suo timestamp. Oltre questa soglia il messaggio racconta lo
+// stato in cui l'area si trovava prima del nostro arrivo: va salvato nello
+// storico, non notificato.
+const FRESH_EVENT_MS = 60000;
+
 let mqttClient = null;
 let mqttReady = false;
 let currentAreaTopics = [];
 let currentAreaId = null;
 let pendingAreaId = null;
+// sopravvive alle disconnessioni: serve a ri-sottoscriversi da soli dopo una
+// riconnessione, altrimenti l'app resta connessa al broker ma senza alcuna
+// subscription attiva e non riceve piu' nessun evento d'area
+let lastAreaId = null;
 let mqttReconnectTimer = null;
 let personalSub = null;
+let notificationsConfigured = false;
 
 const mqttStorage = {
   setItem: (key, item) => AsyncStorage.setItem(key, item),
@@ -28,6 +42,8 @@ const mqttStorage = {
 
 export function getStompClient(idUser) {
   if (client) return client;
+
+  configureNotifications();
 
   client = new Client({
     brokerURL: 'ws://100.65.22.118:15674/ws',
@@ -63,6 +79,43 @@ export function getStompClient(idUser) {
   return client;
 }
 
+// I permessi e i canali Android vanno predisposti una sola volta all'avvio.
+// Il canale "quiet" DEVE esistere: su Android una notifica indirizzata a un
+// channelId inesistente viene scartata senza errori, e tutti gli eventi non
+// urgenti (rientri, accessi non autorizzati) sparirebbero in silenzio.
+async function configureNotifications() {
+  if (notificationsConfigured) return;
+  notificationsConfigured = true;
+
+  try {
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status !== 'granted') {
+      const { status: requested } = await Notifications.requestPermissionsAsync();
+      if (requested !== 'granted') {
+        console.log('Permessi notifiche negati:', requested);
+      }
+    }
+
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'Allarmi',
+        importance: Notifications.AndroidImportance.MAX,
+        sound: 'alarm.wav',
+        vibrationPattern: [0, 500, 250, 500],
+        enableVibrate: true,
+      });
+      await Notifications.setNotificationChannelAsync('quiet', {
+        name: 'Avvisi',
+        importance: Notifications.AndroidImportance.DEFAULT,
+        vibrationPattern: [0, 250],
+        enableVibrate: true,
+      });
+    }
+  } catch (e) {
+    console.log('Errore configurazione notifiche', e);
+  }
+}
+
 function connectMqtt() {
   if (mqttClient) return;
 
@@ -76,6 +129,7 @@ function connectMqtt() {
     console.log('MQTT DISCONNESSO:', responseObject.errorMessage);
     mqttReady = false;
     currentAreaTopics = [];
+    currentAreaId = null; // le subscription sono cadute con la connessione
     scheduleMqttReconnect();
   });
 
@@ -86,14 +140,24 @@ function connectMqtt() {
 
 function doMqttConnect() {
   mqttClient
-    .connect({ userName: 'FARO', password: 'FARO' })
+    .connect({
+      userName: 'FARO',
+      password: 'FARO',
+      // senza keepalive il broker chiude la socket quando la connessione resta
+      // inattiva, ed e' la causa piu' comune del "Socket closed" ricorrente
+      keepAliveInterval: 30,
+    })
     .then(() => {
       console.log('MQTT CONNESSO');
       mqttReady = true;
       currentAreaId = null;
-      if (pendingAreaId) {
-        const idArea = pendingAreaId;
-        pendingAreaId = null;
+
+      // ripristina la sottoscrizione all'ultima area nota: dopo una
+      // riconnessione nessuno lo farebbe, e l'app resterebbe senza eventi
+      const idArea = pendingAreaId || lastAreaId;
+      pendingAreaId = null;
+      if (idArea) {
+        console.log('Ripristino sottoscrizione area dopo connessione:', idArea);
         switchAreaSubscription(idArea);
       }
     })
@@ -117,12 +181,18 @@ export function switchAreaSubscription(idArea) {
   console.log('switchAreaSubscription chiamata, mqttReady =', mqttReady);
   if (!idArea) return;
 
+  // memorizzata comunque: se la connessione non e' pronta, o cade piu' avanti,
+  // e' da qui che si riparte
+  lastAreaId = idArea;
+
   if (!mqttClient || !mqttReady) {
     pendingAreaId = idArea;
     return;
   }
 
   if (idArea === currentAreaId) return; // già iscritto a questa area, non fare nulla
+
+  const cambioArea = currentAreaId !== null && currentAreaId !== idArea;
 
   currentAreaTopics.forEach((topic) => mqttClient.unsubscribe(topic));
 
@@ -132,8 +202,13 @@ export function switchAreaSubscription(idArea) {
 
   console.log('Sottoscritto alla nuova area:', idArea);
 
-  AsyncStorage.setItem('mexsLive', JSON.stringify([]));
-  AsyncStorage.setItem('mexsRecent', JSON.stringify([]));
+  // lo storico messaggi si azzera solo quando si cambia davvero area, non a
+  // ogni riconnessione al broker: altrimenti una disconnessione momentanea
+  // cancellerebbe i messaggi dell'area in cui ci si trova ancora
+  if (cambioArea || currentAreaId !== lastAreaId) {
+    AsyncStorage.setItem('mexsLive', JSON.stringify([]));
+    AsyncStorage.setItem('mexsRecent', JSON.stringify([]));
+  }
 
   refreshCurrentAreaFromServer(idArea);
 }
@@ -145,6 +220,7 @@ export function clearAreaSubscription() {
   currentAreaTopics = [];
   currentAreaId = null;
   pendingAreaId = null;
+  lastAreaId = null;
 }
 
 export function getExistingStompClient() {
@@ -180,21 +256,53 @@ function onPersonalMessage(message) {
 
 function onAreaMqttMessage(message) {
   const raw = message.payloadString;
+  // payload vuoto = cancellazione di un messaggio retained lato broker,
+  // non un evento da mostrare
   if (!raw) return;
   console.log('Messaggio area ricevuto:', JSON.parse(raw));
   const mex = JSON.parse(raw);
   handleAreaEvent(mex.type, mex.payload, mex.timestamp, message.retained);
 }
 
+// Un evento e' "storico" se il suo timestamp e' piu' vecchio di FRESH_EVENT_MS.
+// Non ci si puo' basare sul flag retained da solo: il broker lo lascia attivo
+// anche su consegne live, e un evento provocato dal nostro stesso ingresso in
+// area arriva a un soffio dalla sottoscrizione.
+function isHistoricalEvent(timestamp) {
+  if (!timestamp) return false;
+  const eventTime = Date.parse(timestamp);
+  if (Number.isNaN(eventTime)) return false;
+  return Date.now() - eventTime > FRESH_EVENT_MS;
+}
+
 async function handleAreaEvent(type, payload, timestamp, retained) {
   const user = JSON.parse(await AsyncStorage.getItem('user'));
   const display = buildDisplayMessage(type, payload, timestamp, user?.id);
-  console.log(display)
   if (!display) return;
-  console.log(retained)
-  if (retained) {
+
+  const storico = isHistoricalEvent(timestamp);
+  console.log('evento area', type, '| retained =', retained, '| storico =', storico);
+
+  if (storico) {
     await appendRecentMessage(display);
-    return
+
+    // Il broker conserva un solo messaggio retained per topic, e sia l'edge
+    // sia il backend lo cancellano al rientro. Quindi un ALERT o un DANGER
+    // ricevuto come storico non racconta il passato: descrive lo stato in cui
+    // l'area si trova ADESSO. Chi entra in una zona gia' in pericolo deve
+    // essere avvisato, ed e' proprio il caso che giustifica l'uso del retain.
+    if (type === 'AREA_ALERT' || type === 'AREA_DANGER') {
+      inviaNotifica(
+        'Attenzione: area in allarme',
+        type === 'AREA_ALERT'
+          ? "Sei entrato in un'area con temperatura o umidità oltre soglia."
+          : "Sei entrato in un'area con l'indice di pericolo oltre soglia.",
+        true
+      );
+    }
+
+    refreshCurrentAreaFromServer(currentAreaId);
+    return;
   }
 
   notifyForEvent(type, display);
@@ -300,11 +408,16 @@ async function appendLiveMessage(display) {
 
 const inviaNotifica = async (title, body, urgent) => {
   try {
-    const { status: permStatus } = await Notifications.requestPermissionsAsync();
-    if (permStatus !== 'granted') {
-      alert('Permessi negati: ' + permStatus);
+    await configureNotifications();
+
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status !== 'granted') {
+      // niente alert() bloccante: in una situazione di allarme non deve
+      // comparire una finestra modale al posto dell'avviso
+      console.log('Notifica non mostrata, permessi mancanti:', status);
       return;
     }
+
     await Notifications.scheduleNotificationAsync({
       content: {
         title,
@@ -318,7 +431,7 @@ const inviaNotifica = async (title, body, urgent) => {
       },
     });
   } catch (e) {
-    alert('Errore: ' + e);
+    console.log('Errore invio notifica', e);
   }
 };
 
@@ -329,14 +442,23 @@ export async function disconnectStomp() {
   }
 
   if (mqttClient) {
-    currentAreaTopics.forEach((topic) => mqttClient.unsubscribe(topic));
+    try {
+      currentAreaTopics.forEach((topic) => mqttClient.unsubscribe(topic));
+    } catch (e) {
+      console.log('Errore unsubscribe topic area', e);
+    }
   }
   currentAreaTopics = [];
   currentAreaId = null;
   pendingAreaId = null;
+  lastAreaId = null;
 
   if (personalSub) {
-    personalSub.unsubscribe();
+    try {
+      personalSub.unsubscribe();
+    } catch (e) {
+      console.log('Errore unsubscribe coda personale', e);
+    }
     personalSub = null;
   }
 
@@ -347,7 +469,11 @@ export async function disconnectStomp() {
   stompReady = false;
 
   if (mqttClient) {
-    mqttClient.disconnect();
+    try {
+      mqttClient.disconnect();
+    } catch (e) {
+      console.log('Errore disconnessione MQTT', e);
+    }
     mqttClient = null;
   }
   mqttReady = false;

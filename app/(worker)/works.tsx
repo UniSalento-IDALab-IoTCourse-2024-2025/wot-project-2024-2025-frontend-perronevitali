@@ -7,6 +7,7 @@ import { API_BASE_URL,API_PORT_OS,API_PORT_US } from '@/constants/api';
 export default function WorksScreen() {
 
     const endpointOS = API_BASE_URL + API_PORT_OS
+    const endpointUS = API_BASE_URL + API_PORT_US
     const [works,setWorks] = useState([])
     const [selectedWork,setSelectedWork] = useState(null)
     const getWorks = async () =>{
@@ -40,7 +41,31 @@ export default function WorksScreen() {
     useEffect(()=>{
         getWorks()
     },[])
-
+    const getAuthorizedAreas = async () => {
+      const token = await AsyncStorage.getItem('token');
+      const user = JSON.parse(await AsyncStorage.getItem('user'));
+      const emailUser = user.email;
+      try {
+        const url = endpointUS + '/api/workers/email?email=' + emailUser;
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer ' + token,
+          },
+        });
+        if (!response.ok) {
+          console.log(response.status, ': api/workers/email?email');
+        } else {
+          const data = await response.json();
+          const workAreaList = data.workers.workersList[0].authorizedAreaIds;
+          console.log('Aree aggiornate');
+          await AsyncStorage.setItem('authArea', JSON.stringify(workAreaList));
+        }
+      } catch (e) {
+        console.log('Errore chiamata API GET AREA WORKER', e);
+      }
+    };
     const [isModalVisible,setModalVisible] = useState(false);
     const [isModalRejectVisible,setModalRejectVisible] = useState(false)
     const [rejectWork,setRejectWork] = useState(null)
@@ -118,6 +143,7 @@ export default function WorksScreen() {
                     closeModalRegject()
                     alert("Invio rifiuto eseguito!")
                     getWorks()
+                    getAuthorizedAreas()
                 }
             }
         }catch(e){
@@ -143,6 +169,7 @@ export default function WorksScreen() {
                 if(data.result===0){
                     alert("Task completata con successo!")
                     getWorks()
+                    getAuthorizedAreas()
                 }
             }
         }catch(e){

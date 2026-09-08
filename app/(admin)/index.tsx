@@ -45,6 +45,17 @@ export default function AdminHome () {
                     getAllAreas(token)
                 }else{
                     managedAreas = await getAllAreas(token)
+                    managedAreas.sort((a1,a2)=>{
+                        const nameA1= a1.name.toUpperCase()
+                        const nameA2= a2.name.toUpperCase()
+                            if (nameA1 < nameA2) {
+                                return -1;
+                            }
+                            if (nameA1 > nameA2) {
+                                return 1;
+                            }
+                            return 0;
+                    })
                 }
                 setManagedAreas(managedAreas)
                 await AsyncStorage.setItem("managedId",JSON.stringify(managedID))

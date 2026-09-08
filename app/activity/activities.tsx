@@ -29,8 +29,14 @@ export default function ActivitiesAreaScreen() {
                console.log("Errore risposta /api/tasks?",response.status)
            }else{
                const data = await response.json()
-               console.log(data.tasks.tasksList[0])
-               setActivities(data.tasks.tasksList)
+               const tasks = data.tasks.tasksList
+               let taskArray = new Array()
+               for(let task in tasks){
+                   if(tasks[task].status==="CONFIRMED"){
+                       taskArray.push(tasks[task])
+                   }
+               }
+               setActivities(taskArray)
            }
         }catch(e){
             console.log("Errore chiamata API /api/tasks",e)
@@ -40,7 +46,15 @@ export default function ActivitiesAreaScreen() {
     useEffect(()=>{
         getInfoArea()
     },[])
-
+    const getType = (type) =>{
+        switch(type){
+            case "LOADING": return "CARICO"
+            case "UNLOADING": return "SCARICO"
+            case "INSPECTION": return "ISPEZIONE"
+            case "MAINTENANCE": return "MANUTENZIONE"
+            case "TRANSFER": return "SPOSTAMENTO"
+        }
+    }
     const [isModalVisible,setModalVisible] = useState(false);
     const openModal = (activity) =>{
         setModalVisible(true)
@@ -103,10 +117,10 @@ export default function ActivitiesAreaScreen() {
                         </TouchableOpacity>
                         <Divider style={{ backgroundColor: '#ffa420', marginVertical: 1,  width:"30%",  alignSelf: 'center', height:5 }} />
                         <Divider style={{ backgroundColor: '#ccc', marginVertical: 10 }} />
-                        <Text style={styles.modalText}>Descrizione:</Text><Text style={styles.infoText}>{selectedActivity?.descrizione}</Text>
                         <Text style={styles.modalText}>Sostanza:</Text><Text style={styles.infoText}>{selectedActivity?.substanceName}</Text>
                         <Text style={styles.modalText}>Quantità:</Text><Text style={styles.infoText}>{selectedActivity?.substanceQuantity} litri</Text>
-                        <Text style={styles.modalText}>Indice pericolo:</Text><Text style={styles.infoText}>{Math.round(selectedActivity?.lwhi)}</Text>
+                        <Text style={styles.modalText}>Tipo Operazione: <Text style={styles.infoText}>{getType(selectedActivity?.operationType)}</Text></Text>
+                        <Text style={styles.modalText}>Descrizione:</Text><Text style={styles.infoText}>{selectedActivity?.riskDescription}</Text>
                     </View>
                 </View>
            </Modal>
